@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import '@fontsource/syne/700.css';
+@import '@fontsource/lora/400.css';
+@import '@fontsource/lora/700-italic.css';
+
+@theme {
+  --font-sans: 'Avenir Next', Arial, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Avenir Next', Arial, sans-serif;
+}
+
+.font-heading {
+  font-family: 'Syne', Arial, sans-serif;
+  font-weight: 700;
+}

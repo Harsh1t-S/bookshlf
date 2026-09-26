@@ -7,10 +7,10 @@ export default function BookCollection({ books, onEdit, onRemove, editing, onSav
       {books.map((book) => (
         <article
           key={book.id}
-          className="relative flex flex-col justify-between rounded-[14px] border border-[#eee6da] bg-[#fffaf3] p-3 shadow-xs transition hover:shadow-sm"
+          className="min-w-0 rounded-[14px] border border-[#eee6da] bg-[#fffaf3] p-3 shadow-xs transition hover:shadow-sm"
         >
           <div className="flex gap-3">
-            <div className="w-[52px] shrink-0">
+            <div className="w-[52px] shrink-0" aria-hidden="true">
               <BookCover book={book} className="aspect-[1/1.5] w-full" />
             </div>
 
@@ -33,6 +33,7 @@ export default function BookCollection({ books, onEdit, onRemove, editing, onSav
                 <button
                   type="button"
                   onClick={() => onEdit(book)}
+                  aria-label={`Edit details for ${book.title}`}
                   className="font-semibold text-[#e13a00] hover:underline"
                 >
                   Edit details
@@ -40,7 +41,7 @@ export default function BookCollection({ books, onEdit, onRemove, editing, onSav
                 <button
                   type="button"
                   onClick={() => onRemove(book.id)}
-                  aria-label={`Remove ${book.title}`}
+                  aria-label={`Remove ${book.title} from your shelf`}
                   className="text-[#968c81] hover:text-[#d32f2f] hover:underline"
                 >
                   Remove

@@ -1,9 +1,29 @@
 import { useEffect, useState } from 'react';
 
 const presetColors = [
-  '#b33939', '#218c74', '#2c2c54', '#d35400',
-  '#474787', '#227093', '#b33939', '#57606f',
+  '#b33939',
+  '#218c74',
+  '#2c2c54',
+  '#d35400',
+  '#474787',
+  '#227093',
+  '#57606f',
 ];
+
+function isValidCover(value) {
+  if (!value) return true;
+  if (/\s/.test(value)) return false;
+  if (/^\/assets\/[\w./-]+$/.test(value) && !value.split('/').some((part) => part === '.' || part === '..')) {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
 
 export default function BookEditor({ book, onSave, onCancel }) {
   const [title, setTitle] = useState(book?.title ?? '');
@@ -11,6 +31,7 @@ export default function BookEditor({ book, onSave, onCancel }) {
   const [cover, setCover] = useState(book?.cover ?? '');
   const [color, setColor] = useState(book?.color ?? '#b33939');
   const [rating, setRating] = useState(book?.rating ?? 5);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setTitle(book?.title ?? '');
@@ -18,109 +39,151 @@ export default function BookEditor({ book, onSave, onCancel }) {
     setCover(book?.cover ?? '');
     setColor(book?.color ?? '#b33939');
     setRating(book?.rating ?? 5);
+    setError('');
   }, [book]);
 
   function submit(event) {
     event.preventDefault();
-    if (!title.trim() || !author.trim()) return;
-    onSave({
+    const cleanTitle = title.trim();
+    const cleanAuthor = author.trim();
+
+    if (!cleanTitle || !cleanAuthor) {
+      setError('Enter both a book title and an author.');
+      return;
+    }
+
+    const cleanCover = cover.trim();
+    if (!isValidCover(cleanCover)) {
+      setError('Enter a valid HTTP or HTTPS cover URL, or keep a local /assets/... cover path.');
+      return;
+    }
+
+    const result = onSave({
       ...book,
-      title: title.trim(),
-      author: author.trim(),
-      cover: cover.trim(),
+      title: cleanTitle,
+      author: cleanAuthor,
+      cover: cleanCover,
       color,
       spineBg: color,
       rating,
     });
+    if (typeof result === 'string' && result) {
+      setError(result);
+      return;
+    }
+    setError('');
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="mt-4 rounded-xl border border-[#e5ddd1] bg-[#fffdfa] p-5 shadow-sm"
-    >
+    <form onSubmit={submit} className="mt-4 rounded-xl border border-[#e5ddd1] bg-[#fffdfa] p-5 shadow-sm">
       <div className="flex items-center justify-between border-b border-black/5 pb-3">
         <h4 className="font-serif text-base font-bold text-[#2d241d]">
-          {book ? 'Edit Book Details' : 'Add Book Manually'}
+          {book ? 'Edit book details' : 'Add a book manually'}
         </h4>
-        <span className="text-xs text-[#81776d]">Custom book specs</span>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs font-semibold text-[#544b42]">Book Title</label>
+          <label htmlFor="book-editor-title" className="block text-xs font-semibold text-[#544b42]">
+            Book title
+          </label>
           <input
+            id="book-editor-title"
             autoFocus
-            required
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(event) => setTitle(event.target.value)}
             placeholder="e.g. Sapiens"
-            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00]"
+            aria-invalid={Boolean(error) && !title.trim()}
+            aria-describedby={error ? 'book-editor-error' : undefined}
+            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00] focus:ring-1 focus:ring-[#e13a00]"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#544b42]">Author Name</label>
+          <label htmlFor="book-editor-author" className="block text-xs font-semibold text-[#544b42]">
+            Author
+          </label>
           <input
-            required
+            id="book-editor-author"
             value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            onChange={(event) => setAuthor(event.target.value)}
             placeholder="e.g. Yuval Noah Harari"
-            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00]"
+            aria-invalid={Boolean(error) && !author.trim()}
+            aria-describedby={error ? 'book-editor-error' : undefined}
+            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00] focus:ring-1 focus:ring-[#e13a00]"
           />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-xs font-semibold text-[#544b42]">Cover Image URL</label>
+          <label htmlFor="book-editor-cover" className="block text-xs font-semibold text-[#544b42]">
+            Cover image URL <span className="font-normal text-[#81776d]">(optional)</span>
+          </label>
           <input
+            id="book-editor-cover"
+            type="text"
+            inputMode="url"
             value={cover}
-            onChange={(e) => setCover(e.target.value)}
-            placeholder="https://... (Optional, fallback book cover generated if empty)"
-            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00]"
+            onChange={(event) => setCover(event.target.value)}
+            placeholder="https://example.com/cover.jpg"
+            aria-invalid={error.startsWith('Enter a valid cover URL')}
+            aria-describedby={error.startsWith('Enter a valid cover URL') ? 'book-editor-error' : undefined}
+            className="mt-1 h-10 w-full rounded-lg border border-[#d6cec2] bg-white px-3 text-sm text-[#34291f] outline-none focus:border-[#e13a00] focus:ring-1 focus:ring-[#e13a00]"
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-[#544b42]">Cover / Spine Color</label>
-          <div className="mt-2 flex items-center gap-2">
-            {presetColors.map((c) => (
+        <fieldset>
+          <legend className="block text-xs font-semibold text-[#544b42]">Cover color</legend>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {presetColors.map((preset) => (
               <button
-                key={c}
+                key={preset}
                 type="button"
-                onClick={() => setColor(c)}
-                className={`h-6 w-6 rounded-full transition-transform ${
-                  color === c ? 'scale-125 ring-2 ring-black/40 ring-offset-1' : ''
+                onClick={() => setColor(preset)}
+                className={`h-7 w-7 rounded-full transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e13a00] ${
+                  color === preset ? 'scale-110 ring-2 ring-black/40 ring-offset-2' : ''
                 }`}
-                style={{ backgroundColor: c }}
-                aria-label={`Color ${c}`}
+                style={{ backgroundColor: preset }}
+                aria-label={`Use cover color ${preset}`}
+                aria-pressed={color === preset}
               />
             ))}
+            <label htmlFor="book-editor-color" className="sr-only">Custom cover color</label>
             <input
+              id="book-editor-color"
               type="color"
               value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="h-6 w-6 cursor-pointer rounded-full border-0 bg-transparent p-0"
-              title="Custom color"
+              onChange={(event) => setColor(event.target.value)}
+              className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent p-0"
             />
           </div>
-        </div>
+        </fieldset>
 
-        <div>
-          <label className="block text-xs font-semibold text-[#544b42]">Your Rating</label>
-          <div className="mt-1 flex items-center gap-1">
+        <fieldset>
+          <legend className="block text-xs font-semibold text-[#544b42]">Your rating</legend>
+          <div className="mt-1 flex items-center gap-1" role="group" aria-label="Rate this book">
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 type="button"
                 onClick={() => setRating(star)}
-                className={`text-xl transition ${star <= rating ? 'text-amber-500' : 'text-gray-300'}`}
+                className={`rounded-sm text-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#e13a00] ${
+                  star <= rating ? 'text-amber-500' : 'text-gray-300'
+                }`}
+                aria-label={`Set rating to ${star} ${star === 1 ? 'star' : 'stars'}`}
+                aria-pressed={rating === star}
               >
                 ★
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
       </div>
+
+      {error && (
+        <p id="book-editor-error" role="alert" className="mt-4 text-sm text-[#a34222]">
+          {error}
+        </p>
+      )}
 
       <div className="mt-5 flex items-center justify-end gap-2 border-t border-black/5 pt-3">
         <button
@@ -134,7 +197,7 @@ export default function BookEditor({ book, onSave, onCancel }) {
           type="submit"
           className="rounded-lg bg-[#e13a00] px-5 py-2 text-xs font-semibold text-white hover:bg-[#c93200]"
         >
-          {book ? 'Update Book' : 'Add to Shelf'}
+          {book ? 'Save changes' : 'Add to shelf'}
         </button>
       </div>
     </form>

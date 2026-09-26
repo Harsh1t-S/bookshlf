@@ -21,7 +21,7 @@ export const themes = [
     name: 'Sunny Shelf',
     paid: false,
     price: 0,
-    layout: 'grid',
+    layout: 'floating',
     description: 'Radiant warm amber sunset ambience',
     colors: {
       page: 'linear-gradient(180deg, #fff3e3 0%, #fae6cb 100%)',

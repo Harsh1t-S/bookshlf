@@ -2,6 +2,7 @@
 @import '@fontsource/syne/700.css';
 @import '@fontsource/lora/400.css';
 @import '@fontsource/lora/700-italic.css';
+@import './bookish-motion.css';
 
 @theme {
   --font-sans: 'Avenir Next', Arial, sans-serif;
@@ -17,6 +18,64 @@
 body {
   margin: 0;
   font-family: 'Avenir Next', Arial, sans-serif;
+}
+
+button:not(:disabled),
+a[href],
+[role='button']:not([aria-disabled='true']),
+label {
+  cursor: pointer;
+}
+
+label:has(:disabled) {
+  cursor: not-allowed;
+}
+
+input:not([type='button']):not([type='submit']):not([type='reset']):not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']):not([type='range']),
+textarea {
+  cursor: text;
+}
+
+select,
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+input[type='checkbox'],
+input[type='radio'],
+input[type='color'],
+input[type='file'],
+input[type='range'] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled='true'],
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+}
+
+:where(button, a[href], input, select, textarea, [role='button']):focus-visible {
+  outline: 2px solid #df3900;
+  outline-offset: 2px;
+}
+
+button:not(:disabled):active,
+a[href]:active,
+[role='button']:not([aria-disabled='true']):active {
+  filter: brightness(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .font-heading {

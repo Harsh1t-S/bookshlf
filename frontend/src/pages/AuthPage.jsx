@@ -1,21 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [googleMessage, setGoogleMessage] = useState(false);
+  const [googleMessage, setGoogleMessage] = useState('');
+  const [error, setError] = useState('');
+  const emailInput = useRef(null);
+  const passwordInput = useRef(null);
 
   const isSignup = mode === 'signup' || mode === 'sign-up';
   const title = isSignup ? 'Create your account' : 'Sign in';
+  const emailInvalid = error.startsWith('Enter your email') || error.startsWith('Enter a valid email');
+
+  useEffect(() => {
+    setPassword('');
+    setShowPassword(false);
+    setError('');
+    setGoogleMessage('');
+  }, [mode]);
 
   function handleSubmit(event) {
     event.preventDefault();
-    onContinue?.({ email });
+    const normalizedEmail = email.trim();
+    const localPart = normalizedEmail.split('@')[0] ?? '';
+
+    if (!normalizedEmail) {
+      setError('Enter your email address to continue.');
+      emailInput.current?.focus();
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError('Enter a valid email address, such as name@example.com.');
+      emailInput.current?.focus();
+      return;
+    }
+    if (!password || password.length < 8) {
+      setError('Enter a password with at least 8 characters. Your password will not be saved.');
+      passwordInput.current?.focus();
+      return;
+    }
+
+    setError('');
+    setEmail(normalizedEmail);
+    setPassword('');
+    setShowPassword(false);
+    onContinue?.({
+      email: normalizedEmail,
+      name: localPart.replace(/[._-]+/g, ' ').trim() || normalizedEmail,
+    });
+  }
+
+  function switchMode() {
+    setPassword('');
+    setShowPassword(false);
+    setError('');
+    setGoogleMessage('');
+    onModeChange?.(isSignup ? 'signin' : 'signup');
   }
 
   return (
-    <section className="mx-auto w-full max-w-[540px] px-5 pb-10 pt-16 sm:px-0 sm:pt-[108px]">
+    <main className="mx-auto w-full max-w-[540px] px-5 pb-10 pt-16 sm:px-0 sm:pt-[108px]">
       <header className="mb-8 text-center">
         <h1 className="font-heading text-[32px] leading-tight text-[#25221f] sm:text-[40px]">
           {title}
@@ -29,7 +74,7 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
 
       <button
         type="button"
-        onClick={() => setGoogleMessage(true)}
+        onClick={() => setGoogleMessage('Google sign-in is not connected in this preview. Use the form below to continue.')}
         className="flex h-14 w-full items-center justify-center gap-3 rounded-[10px] border border-[#333] bg-white text-[15px] font-medium text-[#292521] transition hover:bg-[#fffdfa] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e13a00]"
       >
         <span aria-hidden="true" className="text-[19px] font-bold leading-none">
@@ -39,7 +84,7 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
       </button>
       {googleMessage && (
         <p role="status" className="mt-3 text-center text-sm leading-5 text-[#77736f]">
-          Google sign-in is not connected in this preview. Use the form below to explore the setup.
+          {googleMessage}
         </p>
       )}
 
@@ -49,13 +94,14 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
         <span className="h-px flex-1 bg-[#dedbd7]" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div>
           <label htmlFor="auth-email" className="mb-2 block text-sm font-medium text-[#312d29]">
             Email address
           </label>
           <input
             id="auth-email"
+            ref={emailInput}
             name="email"
             type="email"
             autoComplete="email"
@@ -63,6 +109,8 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
+            aria-describedby={error ? 'auth-error' : undefined}
+            aria-invalid={emailInvalid}
             className="h-[52px] w-full rounded-[10px] border border-[#bdb8b1] bg-[#fffdf9] px-4 text-base text-[#292521] shadow-[0_2px_5px_rgba(36,28,20,0.05)] outline-none transition placeholder:text-[#a29d97] focus:border-[#e13a00] focus:ring-2 focus:ring-[#e13a00]/15"
           />
         </div>
@@ -74,6 +122,7 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
           <div className="relative">
             <input
               id="auth-password"
+              ref={passwordInput}
               name="password"
               type={showPassword ? 'text' : 'password'}
               autoComplete={isSignup ? 'new-password' : 'current-password'}
@@ -82,6 +131,8 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Minimum 8 characters"
+              aria-describedby={error ? 'auth-error' : 'auth-password-help'}
+              aria-invalid={error.startsWith('Enter a password')}
               className="h-[52px] w-full rounded-[10px] border border-[#bdb8b1] bg-[#fffdf9] px-4 pr-14 text-base text-[#292521] shadow-[0_2px_5px_rgba(36,28,20,0.05)] outline-none transition placeholder:text-[#a29d97] focus:border-[#e13a00] focus:ring-2 focus:ring-[#e13a00]/15"
             />
             <button
@@ -104,10 +155,19 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
               )}
             </button>
           </div>
+          <p id="auth-password-help" className="mt-2 text-xs text-[#827d77]">
+            Preview only. Password is checked here and never sent or saved.
+          </p>
         </div>
 
+        {error && (
+          <p id="auth-error" role="alert" className="text-sm text-[#a34222]">
+            {error}
+          </p>
+        )}
+
         <p className="-mt-1 text-center text-xs text-[#827d77]">
-          Preview mode — no account is created.
+          This creates a browser-only profile. No server account is created.
         </p>
         <button
           type="submit"
@@ -121,12 +181,12 @@ export default function AuthPage({ onContinue, mode = 'signup', onModeChange }) 
         {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
         <button
           type="button"
-          onClick={() => onModeChange?.(isSignup ? 'signin' : 'signup')}
+          onClick={switchMode}
           className="font-semibold text-[#c93400] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#df3900]"
         >
           {isSignup ? 'Sign in' : 'Create account'}
         </button>
       </p>
-    </section>
+    </main>
   );
 }

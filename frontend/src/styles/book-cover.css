@@ -1,0 +1,155 @@
+.book-cover {
+  --book-rotate-x: 0deg;
+  --book-rotate-y: 0deg;
+  --book-light-x: 50%;
+  --book-light-y: 50%;
+  isolation: isolate;
+  perspective: 900px;
+}
+
+.book-cover__object {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--book-shadow);
+  transform: rotateX(var(--book-rotate-x)) rotateY(var(--book-rotate-y)) translateZ(0);
+  transform-origin: center center;
+  transform-style: preserve-3d;
+  transition: transform 260ms ease, box-shadow 260ms ease;
+}
+
+.book-cover__pages {
+  position: absolute;
+  z-index: 0;
+  top: 2px;
+  right: 0;
+  bottom: 2px;
+  width: 7px;
+  border-radius: 0 4px 4px 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    #fffdf3 0,
+    #fffdf3 1px,
+    #e7e0ce 1px,
+    #e7e0ce 2px,
+    #f9f5e8 2px,
+    #f9f5e8 5px
+  );
+  box-shadow: 2px 1px 4px rgb(0 0 0 / 18%);
+  pointer-events: none;
+}
+
+.book-cover__face {
+  position: absolute;
+  z-index: 1;
+  inset: 0 3px 0 0;
+  overflow: hidden;
+  border-radius: inherit;
+  backface-visibility: hidden;
+}
+
+.book-cover__body {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.book-cover__spine-highlight,
+.book-cover__spine-shadow,
+.book-cover__edge-sheen,
+.book-cover__hinge {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.book-cover__spine-highlight {
+  left: 0;
+  width: 4px;
+  background: linear-gradient(to right, rgb(255 255 255 / 30%), rgb(255 255 255 / 10%), transparent);
+}
+
+.book-cover__spine-shadow {
+  left: 4px;
+  width: 8px;
+  background: linear-gradient(to right, rgb(0 0 0 / 40%), rgb(0 0 0 / 15%), transparent);
+}
+
+.book-cover__edge-sheen {
+  right: 0;
+  width: 2px;
+  background: linear-gradient(to left, rgb(255 255 255 / 20%), transparent);
+}
+
+.book-cover__hinge {
+  left: 12px;
+  width: 1px;
+  background: linear-gradient(to right, rgb(0 0 0 / 22%), rgb(255 255 255 / 12%), transparent);
+  box-shadow: 1px 0 2px rgb(0 0 0 / 10%);
+}
+
+.book-cover__sheen {
+  position: absolute;
+  z-index: 3;
+  inset: 0 3px 0 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at var(--book-light-x) var(--book-light-y),
+    rgb(255 255 255 / 85%) 0,
+    rgb(255 255 255 / 8%) 24%,
+    transparent 62%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .book-cover[data-interactive='true']:hover .book-cover__object {
+    transform: rotateX(var(--book-rotate-x)) rotateY(var(--book-rotate-y)) translateY(-7px) translateZ(9px);
+    box-shadow: var(--book-shadow), 0 10px 9px rgb(0 0 0 / 20%);
+    will-change: transform;
+  }
+
+  .book-cover[data-interactive='true']:hover .book-cover__sheen {
+    opacity: 0.18;
+  }
+}
+
+button:focus-visible .book-cover[data-interactive='true'] .book-cover__object {
+  transform: rotateX(-2deg) rotateY(3deg) translateY(-7px) translateZ(9px);
+  box-shadow: var(--book-shadow), 0 10px 9px rgb(0 0 0 / 20%);
+  will-change: transform;
+}
+
+button:focus-visible .book-cover[data-interactive='true'] .book-cover__sheen {
+  opacity: 0.18;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-cover__face,
+  .book-cover__object,
+  .book-cover__sheen {
+    transition: none;
+  }
+
+  .book-cover[data-interactive='true']:hover .book-cover__object,
+  button:focus-visible .book-cover[data-interactive='true'] .book-cover__object {
+    transform: none;
+    box-shadow: var(--book-shadow);
+  }
+
+  .book-cover[data-interactive='true']:hover .book-cover__sheen,
+  button:focus-visible .book-cover[data-interactive='true'] .book-cover__sheen {
+    opacity: 0;
+  }
+}
+
+.book-cover[data-interactive='false'] .book-cover__object {
+  transition: none;
+}

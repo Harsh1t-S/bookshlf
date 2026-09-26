@@ -1,6 +1,8 @@
 node_modules/
 dist/
+dist-root-backup/
 .vite/
+*.log
 .env
 .env.*
 !.env.example

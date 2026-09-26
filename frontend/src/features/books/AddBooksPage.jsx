@@ -13,7 +13,7 @@ const options = [
     ),
     title: 'Connect Goodreads',
     description: 'Bring your reading shelves along.',
-    link: 'Connect account →',
+    link: 'Import unavailable',
   },
   {
     id: 'photo',
@@ -25,7 +25,7 @@ const options = [
     ),
     title: 'Photograph your shelves',
     description: 'Start with a photo of your books.',
-    link: 'Upload a photo →',
+    link: 'Choose a photo →',
   },
   {
     id: 'browse',
@@ -43,6 +43,11 @@ const options = [
 const inputClass =
   'w-full rounded-xl border border-[#d6cec2] bg-white px-4 py-3 text-sm text-[#34291f] outline-none transition focus:border-[#e13a00] focus:ring-1 focus:ring-[#e13a00]';
 
+function bookKey(book) {
+  const normalize = (value = '') => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  return `${normalize(book.title)}\u0000${normalize(book.author)}`;
+}
+
 export default function AddBooksPage({
   books = [],
   onBooksChange = () => {},
@@ -51,13 +56,13 @@ export default function AddBooksPage({
   catalog = [],
 }) {
   const [mode, setMode] = useState('goodreads');
-  const [username, setUsername] = useState('');
-  const [fetchMessage, setFetchMessage] = useState('');
+  const [photoMessage, setPhotoMessage] = useState('');
   const [query, setQuery] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [removedBook, setRemovedBook] = useState(null);
 
   useEffect(() => () => {
     if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -65,18 +70,59 @@ export default function AddBooksPage({
 
   function addBook(book) {
     const id = book.id ?? `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    if (books.some((item) => item.id === id)) return;
+    const duplicate = books.some((item) => item.id === id || bookKey(item) === bookKey(book));
+    if (duplicate) {
+      const message = `${book.title} by ${book.author} is already on your shelf.`;
+      setStatusMessage(message);
+      return message;
+    }
     onBooksChange([...books, { ...book, id }]);
+    setStatusMessage(`${book.title} was added to your shelf.`);
+    setRemovedBook(null);
+    return true;
   }
 
   function saveBook(book) {
     if (editing) {
+      const duplicate = books.some((item) =>
+        item.id !== editing.id && bookKey(item) === bookKey(book)
+      );
+      if (duplicate) {
+        return `${book.title} by ${book.author} is already on your shelf.`;
+      }
       onBooksChange(books.map((item) => (item.id === editing.id ? { ...item, ...book } : item)));
+      setStatusMessage(`${book.title} details were updated.`);
     } else {
-      addBook(book);
+      const result = addBook(book);
+      if (result !== true) return result;
     }
     setEditing(null);
     setManualOpen(false);
+    return true;
+  }
+
+  function removeBook(id) {
+    const index = books.findIndex((book) => book.id === id);
+    if (index < 0) return;
+    const [book] = books.slice(index, index + 1);
+    setRemovedBook({ book, index });
+    onBooksChange(books.filter((item) => item.id !== id));
+    if (editing?.id === id) setEditing(null);
+    setStatusMessage(`${book.title} was removed from your shelf.`);
+  }
+
+  function undoRemove() {
+    if (!removedBook) return;
+    if (books.some((book) => bookKey(book) === bookKey(removedBook.book))) {
+      setStatusMessage('That book is already on your shelf, so it could not be restored.');
+      setRemovedBook(null);
+      return;
+    }
+    const nextBooks = [...books];
+    nextBooks.splice(Math.min(removedBook.index, nextBooks.length), 0, removedBook.book);
+    onBooksChange(nextBooks);
+    setStatusMessage(`${removedBook.book.title} was restored to your shelf.`);
+    setRemovedBook(null);
   }
 
   const library = catalog.map((book, index) => ({
@@ -89,30 +135,33 @@ export default function AddBooksPage({
   );
 
   const loadSamples = () => {
-    const samples = library.slice(0, 6).filter((item) => !books.some((book) => book.id === item.id));
+    const keys = new Set(books.map(bookKey));
+    const ids = new Set(books.map((book) => book.id));
+    const samples = library.slice(0, 6).filter((item) => {
+      const key = bookKey(item);
+      if (keys.has(key) || ids.has(item.id)) return false;
+      keys.add(key);
+      ids.add(item.id);
+      return true;
+    });
     onBooksChange([...books, ...samples]);
-    setFetchMessage(
-      samples.length
-        ? `Added ${samples.length} popular books to your shelf!`
-        : 'All sample books are already on your shelf.'
-    );
+    setStatusMessage(samples.length
+      ? `Added ${samples.length} sample books from the local catalog.`
+      : 'All local sample books are already on your shelf.');
+    setRemovedBook(null);
   };
 
   function selectPhoto(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoUrl('');
+      setPhotoMessage('Choose an image file to preview your bookshelf photo.');
+      return;
+    }
+    setPhotoMessage('');
     setPhotoUrl(URL.createObjectURL(file));
-  }
-
-  function simulateScan() {
-    setIsScanning(true);
-    setTimeout(() => {
-      setIsScanning(false);
-      // Add detected titles from catalog
-      const detected = library.slice(0, 4).filter((item) => !books.some((book) => book.id === item.id));
-      onBooksChange([...books, ...detected]);
-    }, 1500);
   }
 
   return (
@@ -175,55 +224,23 @@ export default function AddBooksPage({
       <section className="mt-5 rounded-[18px] border border-[#e8e2d8] bg-white p-6 shadow-xs">
         {mode === 'goodreads' && (
           <div>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#2d241c]">Goodreads Import</h3>
+                <h3 className="font-serif text-xl font-bold text-[#2d241c]">Goodreads import</h3>
                 <p className="mt-1 text-xs text-[#81776d]">
-                  Enter your Goodreads profile URL or user ID to import your read shelf.
+                  Goodreads import is unavailable in this browser preview. Browse the local catalog instead.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={loadSamples}
-                className="hidden rounded-full border border-[#e13a00] px-4 py-1.5 text-xs font-semibold text-[#e13a00] hover:bg-[#fff5f0] sm:inline-block"
+                onClick={() => setMode('browse')}
+                className="rounded-full border border-[#e13a00] px-4 py-1.5 text-xs font-semibold text-[#e13a00] hover:bg-[#fff5f0]"
               >
-                + Quick Load Samples
+                Browse local books
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                loadSamples();
-              }}
-              className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]"
-            >
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. goodreads.com/user/show/12345 or user ID"
-                className={inputClass}
-              />
-              <button
-                type="submit"
-                className="h-11 rounded-xl bg-[#e13a00] px-6 text-sm font-semibold text-white hover:bg-[#c93200]"
-              >
-                Sync Goodreads
-              </button>
-            </form>
-
-            {fetchMessage && (
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-[#f9f4ed] p-3 text-xs text-[#6e5845]">
-                <span>{fetchMessage}</span>
-                <button
-                  type="button"
-                  onClick={loadSamples}
-                  className="font-bold text-[#e13a00] underline"
-                >
-                  Load more
-                </button>
-              </div>
-            )}
+            <p className="mt-3 text-xs text-[#81776d]">No Goodreads account details or password are requested.</p>
           </div>
         )}
 
@@ -231,30 +248,35 @@ export default function AddBooksPage({
           <div>
             <h3 className="font-serif text-xl font-bold text-[#2d241c]">Photograph your shelves</h3>
             <p className="mt-1 text-xs text-[#81776d]">
-              Take or upload a photo of your bookshelf spines. Our scanner will extract the titles.
+              Upload a bookshelf photo for reference, then add the titles manually.
             </p>
 
             <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d6cec2] bg-[#fffdfa] p-6 text-center hover:border-[#e13a00]">
               <svg className="h-8 w-8 text-[#9b8d7e]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <span className="mt-2 text-sm font-semibold text-[#2d241c]">Click or drop a bookshelf photo here</span>
-              <span className="mt-0.5 text-xs text-[#81776d]">Supports JPG, PNG, HEIC up to 20MB</span>
-              <input type="file" accept="image/*" className="sr-only" onChange={selectPhoto} />
+              <span className="mt-2 text-sm font-semibold text-[#2d241c]">Choose a bookshelf photo</span>
+              <span className="mt-0.5 text-xs text-[#81776d]">Image files only</span>
+              <input aria-label="Choose a bookshelf photo" type="file" accept="image/*" className="sr-only" onChange={selectPhoto} />
             </label>
+
+            {photoMessage && <p role="alert" className="mt-3 text-xs text-[#a34222]">{photoMessage}</p>}
 
             {photoUrl && (
               <div className="mt-4 flex flex-col items-center sm:flex-row sm:gap-6">
                 <img src={photoUrl} alt="Bookshelf capture" className="h-36 rounded-lg object-cover shadow-sm" />
                 <div className="mt-3 sm:mt-0">
-                  <p className="text-xs font-semibold text-emerald-600">Photo loaded successfully</p>
+                  <p className="text-xs font-semibold text-[#2d241c]">Photo preview ready. Book recognition is unavailable.</p>
                   <button
                     type="button"
-                    disabled={isScanning}
-                    onClick={simulateScan}
-                    className="mt-2 rounded-xl bg-[#e13a00] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#c93200] disabled:opacity-50"
+                    onClick={() => {
+                      setEditing(null);
+                      setManualOpen(true);
+                      window.setTimeout(() => document.getElementById('manual-book-editor')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
+                    }}
+                    className="mt-2 rounded-xl bg-[#e13a00] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#c93200]"
                   >
-                    {isScanning ? 'Scanning Spines...' : 'Scan & Extract Books'}
+                    Add book details manually
                   </button>
                 </div>
               </div>
@@ -266,21 +288,35 @@ export default function AddBooksPage({
           <div>
             <h3 className="font-serif text-xl font-bold text-[#2d241c]">Browse library</h3>
             <p className="mt-1 text-xs text-[#81776d]">
-              Search through millions of classic and contemporary titles to add to your shelf.
+              Search titles and authors in the local catalog, then add books to your shelf.
             </p>
 
-            <div className="mt-4">
+            <label htmlFor="catalog-search" className="mt-4 block text-xs font-semibold text-[#544b42]">
+              Search by title or author
+            </label>
+            <div className="mt-1">
               <input
+                id="catalog-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by title, author, or genre..."
+                placeholder="Search by title or author"
                 className={inputClass}
               />
             </div>
 
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="mt-2 text-xs font-semibold text-[#e13a00] underline-offset-2 hover:underline"
+              >
+                Clear search
+              </button>
+            )}
+
             <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
               {filtered.map((book) => {
-                const isAdded = books.some((item) => item.id === book.id);
+                const isAdded = books.some((item) => bookKey(item) === bookKey(book));
                 return (
                   <div
                     key={book.id}
@@ -311,6 +347,15 @@ export default function AddBooksPage({
                   </div>
                 );
               })}
+              {filtered.length === 0 && (
+                <p className="py-8 text-center text-sm text-[#81776d]" role="status">
+                  {library.length === 0
+                    ? 'The local catalog has no books yet.'
+                    : query.trim()
+                      ? `No books match “${query.trim()}”. Try a different title or author.`
+                      : 'No books are available in the local catalog yet.'}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -326,7 +371,7 @@ export default function AddBooksPage({
             <p className="text-xs text-[#81776d]">
               {books.length === 0
                 ? 'Your shelf is currently empty. Add books above.'
-                : 'Books ready to be showcased on your virtual shelf.'}
+                : 'Books on your shelf.'}
             </p>
           </div>
 
@@ -343,7 +388,20 @@ export default function AddBooksPage({
         </div>
 
         {manualOpen && (
-          <BookEditor onSave={saveBook} onCancel={() => setManualOpen(false)} />
+          <div id="manual-book-editor">
+            <BookEditor onSave={saveBook} onCancel={() => setManualOpen(false)} />
+          </div>
+        )}
+
+        {statusMessage && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#6e5845]" role="status" aria-live="polite">
+            <span>{statusMessage}</span>
+            {removedBook && (
+              <button type="button" onClick={undoRemove} className="font-semibold text-[#e13a00] underline-offset-2 hover:underline">
+                Undo
+              </button>
+            )}
+          </div>
         )}
 
         {books.length > 0 ? (
@@ -354,7 +412,7 @@ export default function AddBooksPage({
               setManualOpen(false);
               setEditing(b);
             }}
-            onRemove={(id) => onBooksChange(books.filter((b) => b.id !== id))}
+            onRemove={removeBook}
             onSave={saveBook}
             onCancel={() => setEditing(null)}
           />

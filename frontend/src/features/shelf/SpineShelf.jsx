@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import '../../styles/spine-shelf.css';
 
 const fallbackSpineColors = ['#355f4b', '#7a493c', '#9a6f31', '#3d5872', '#695074', '#596b3e'];
 
@@ -40,79 +41,83 @@ function readableTextColor(color, preferred) {
   return contrastRatio(light, color) > contrastRatio(dark, color) ? light : dark;
 }
 
-function groupBooks(books, perRow) {
+function groupBooks(volumes, availableWidth, gap) {
   const rows = [];
-  for (let index = 0; index < books.length; index += perRow) {
-    rows.push(books.slice(index, index + perRow));
+  let row = [];
+  let rowWidth = 0;
+  for (const volume of volumes) {
+    const addedWidth = volume.width + (row.length ? gap : 0);
+    if (row.length && rowWidth + addedWidth > availableWidth) {
+      rows.push(row);
+      row = [];
+      rowWidth = 0;
+    }
+    rowWidth += volume.width + (row.length ? gap : 0);
+    row.push(volume);
   }
+  if (row.length) rows.push(row);
   return rows;
 }
 
-function getViewportSize() {
-  if (typeof window === 'undefined') return 'desktop';
-  if (window.innerWidth < 640) return 'compact';
-  if (window.innerWidth < 1024) return 'medium';
-  return 'desktop';
-}
-
 export default function SpineShelf({ books = [], theme, onBookSelect }) {
-  const [viewportSize, setViewportSize] = useState(getViewportSize);
+  const shelfRef = useRef(null);
+  const [shelfWidth, setShelfWidth] = useState(() => (
+    typeof window === 'undefined' ? 1122 : Math.max(180, Math.min(1122, window.innerWidth - 104))
+  ));
 
   useEffect(() => {
-    const updateWidth = () => setViewportSize(getViewportSize());
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
+    if (!shelfRef.current) return undefined;
+    const observer = new ResizeObserver(([entry]) => setShelfWidth(Math.max(1, entry.contentRect.width)));
+    observer.observe(shelfRef.current);
+    return () => observer.disconnect();
+  }, [books.length > 0]);
 
-  const booksPerRow = viewportSize === 'compact' ? 6 : viewportSize === 'medium' ? 9 : 12;
-  const rows = groupBooks(books, booksPerRow);
+  const scale = Math.min(1, Math.max(.74, shelfWidth / 880));
+  const gap = shelfWidth < 600 ? 4 : 7;
+  const titleSize = 12 * scale;
+  const volumes = books.map(book => {
+    const title = String(book.title ?? '');
+    const seed = hashText(String(book.id ?? title));
+    const height = Math.round((190 + hashText(`${seed}-height`) % 110) * scale);
+    const textHeight = height - 36 * scale;
+    const titleColumns = Math.min(3, Math.max(1, Math.ceil(title.length * titleSize * .62 / textHeight)));
+    const minimumWidth = (titleColumns * 15 + 36) * scale;
+    const width = Math.round(Math.max(minimumWidth, (40 + hashText(`${seed}-thickness`) % 43) * scale));
+    return { book, title, seed, width, height };
+  });
+  const rows = groupBooks(volumes, shelfWidth, gap);
 
   if (!books.length) {
     return <p className="py-12 text-center text-sm text-[#d8e1db]">Your shelf is empty.</p>;
   }
 
   return (
-    <section aria-label={`${theme?.name || 'Spine'} bookshelf`} className="mx-auto w-full max-w-[1170px] overflow-hidden rounded-xl bg-[#0d1f16] px-2 py-7 sm:px-6 sm:py-10">
+    <section ref={shelfRef} aria-label={`${theme?.name || 'Spine'} bookshelf`} className="mx-auto w-full max-w-[1170px] overflow-hidden rounded-xl bg-[#0d1f16] px-2 py-7 sm:px-6 sm:py-10">
       <div className="space-y-8 sm:space-y-12">
         {rows.map((row, rowIndex) => (
           <div key={`shelf-row-${rowIndex}`} className="relative">
-            <div className="flex min-h-[165px] items-end justify-center gap-1 px-1 sm:min-h-[250px] sm:gap-2 sm:px-3">
-              {row.map((book, bookIndex) => {
-                const title = String(book.title ?? '');
-                const seed = hashText(String(book.id ?? title));
+            <div className="shelf-spine-row" style={{ gap, minHeight: Math.max(...row.map(volume => volume.height)) + 24 }}>
+              {row.map(({ book, title, seed, width, height }, bookIndex) => {
                 const background = book.spineBg || book.color || fallbackSpineColors[seed % fallbackSpineColors.length];
                 const foreground = readableTextColor(background, book.spineText);
-                const width = viewportSize === 'compact'
-                  ? 30 + (seed % 11)
-                  : viewportSize === 'medium'
-                    ? 36 + (seed % 13)
-                    : 42 + (seed % 17);
-                const height = viewportSize === 'compact'
-                  ? 124 + (seed % 47)
-                  : viewportSize === 'medium'
-                    ? 142 + (seed % 58)
-                    : 160 + (seed % 76);
-
                 return (
                   <button
                     key={book.id ?? `${title}-${rowIndex}-${bookIndex}`}
                     type="button"
-                    aria-label={title ? `View ${title}` : 'View book'}
-                    title={title || undefined}
+                    aria-label={title ? `View ${title}${book.author ? ` by ${book.author}` : ''}` : 'View book'}
+                    title={[title, book.author].filter(Boolean).join(' — ') || undefined}
                     onClick={() => onBookSelect?.(book)}
-                    className="shelf-spine group relative flex shrink-0 flex-col items-center justify-between overflow-hidden rounded-t-[3px] border-x border-t border-white/20 px-0.5 pb-2 pt-2 shadow-[2px_0_4px_rgba(0,0,0,.32)] focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f3ce73]"
-                    style={{ width: `${width}px`, height: `${height}px`, backgroundColor: background, color: foreground }}
+                    className="shelf-spine group relative shrink-0 overflow-hidden rounded-t-[3px] border-x border-t border-white/20 shadow-[2px_0_4px_rgba(0,0,0,.32)] focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f3ce73]"
+                    style={{ width, height, backgroundColor: background, color: foreground, '--spine-scale': scale, '--spine-title-size': `${titleSize}px` }}
                   >
                     <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-[5px] bg-gradient-to-r from-white/30 to-transparent" />
                     <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-[4px] bg-gradient-to-l from-black/25 to-transparent" />
-                    <span aria-hidden="true" className="h-[3px] w-2/3 rounded-full bg-amber-200/70 shadow-sm" />
-                    <span className="my-auto max-h-[78%] overflow-hidden text-[10px] font-semibold leading-tight tracking-[.035em] sm:text-xs" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', textOrientation: 'mixed' }}>
-                      {title}
+                    <span aria-hidden="true" className="shelf-spine__rule" />
+                    <span className="shelf-spine__lettering" aria-hidden="true">
+                      <span className="shelf-spine__title">{title}</span>
+                      {book.author && <span className="shelf-spine__author">{book.author}</span>}
                     </span>
-                    <span className="max-h-[22%] overflow-hidden text-[8px] leading-tight opacity-80 sm:text-[9px]" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', textOrientation: 'mixed' }}>
-                      {book.author || ''}
-                    </span>
+                    <span aria-hidden="true" className="shelf-spine__rule shelf-spine__rule--bottom" />
                   </button>
                 );
               })}

@@ -1,0 +1,8 @@
+{
+  "name": "bookshlf-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build && cp -r frontend/dist dist 2>/dev/null || xcopy /E /I frontend\\dist dist 2>nul || true",
+    "dev": "npm --prefix frontend run dev"
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import BookEditor from './BookEditor.jsx';
-import Modal from '../../shared/Modal.jsx';
+import Modal from '../../components/Modal.jsx';
 
 const SYNC_DELAY = 1800;
 
@@ -45,7 +45,7 @@ function Alert({ tone, children }) {
   );
 }
 
-export default function AddBooksPage({ books = [], catalog = [], onBooksChange, onContinue }) {
+export default function AddBooks({ books = [], catalog = [], onBooksChange, onContinue }) {
   const [mode, setMode] = useState('goodreads');
   const [goodreadsId, setGoodreadsId] = useState('');
   const [goodreadsError, setGoodreadsError] = useState('');

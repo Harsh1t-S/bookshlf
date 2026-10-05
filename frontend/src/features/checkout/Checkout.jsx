@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { getTheme, themePrice } from '../data/themes.js';
-import { payWithRazorpay, razorpayConfigError } from '../lib/razorpay.js';
-import '../styles/purchase.css';
+import { getTheme, themePrice } from '../../data/themes.js';
+import { payWithRazorpay, razorpayConfigError } from './razorpay.js';
+import '../../styles/purchase.css';
 
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 
-export default function PurchasePage({ theme, name = '', email = '', onBack, onPaid }) {
+export default function Checkout({ theme, name = '', email = '', onBack, onPaid }) {
   const chosen = getTheme(theme);
   const { subtotal, gst, total } = themePrice(chosen);
   const [form, setForm] = useState({ name, email, phone: '', country: 'India', address: '', city: '', state: '', postal: '', business: false, gstin: '' });

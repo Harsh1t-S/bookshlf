@@ -52,16 +52,25 @@ until an order-creation and verification endpoint is added.
 
 ## Structure
 
-- `frontend/src/main.jsx`: React entry point.
-- `frontend/src/App.jsx`: route handling, local profile, and bookshelf flow.
-- `frontend/src/hooks/useBrowserRouter.js`: native History API navigation.
-- `frontend/src/lib/browserStorage.js`: validated local profile and draft storage.
-- `frontend/src/data/`: local book catalog and theme definitions.
-- `frontend/src/pages/`: landing, auth, checkout and shelf screens.
-- `frontend/src/features/themes/`: theme picker.
-- `frontend/src/features/shelf/`: the six shelf looks, scaled previews and book details.
-- `frontend/src/lib/razorpay.js`: Razorpay Checkout loader (test mode).
-- `frontend/src/features/books/`: local catalog, add/edit flow, and collection.
-- `frontend/src/shared/`: page shell with nav and corner books, book cover, modal.
-- `frontend/src/styles/index.css`: font imports, Tailwind theme, and global styles.
+All source lives in `frontend/src/`:
+
+- `main.jsx`: React entry point.
+- `App.jsx`: the route table — maps each URL to its page, nothing else.
+- `app/`: app-wide state and navigation.
+  - `useBookshelf.js`: signed-in reader, the shelf being built (books, look, purchased looks) and the steps between pages.
+  - `useBrowserRouter.js`: History API navigation for plain `<a href>` links.
+  - `useRouteScroll.js`: scroll-to-top, `#section` landing and heading focus on page change.
+- `pages/`: one thin file per route (`LandingPage`, `AuthPage`, `ThemesPage`, `BooksPage`, `CheckoutPage`, `ShelfPage`, `DemoPage`, `NotFoundPage`). Each reads what it needs from `app` and renders a feature.
+- `sections/landing/`: the landing page, one file per section, with all copy and Figma artwork in `content.jsx`.
+- `features/`: the actual screens and their logic.
+  - `auth/`: sign-up / sign-in form and the nav sign-in link.
+  - `themes/`: the look picker.
+  - `books/`: Goodreads, photo and library import, manual book editor.
+  - `checkout/`: dark checkout page and the Razorpay loader (test mode).
+  - `shelf/`: the six shelf looks, scaled previews, shelf page layout and the book-opening reading card.
+- `components/`: shared building blocks — setup-flow shell with nav and corner books, book cover, modal.
+- `hooks/useReveal.js`: fade-in-on-scroll for landing sections.
+- `data/`: book catalog, theme definitions and Figma asset paths.
+- `lib/browserStorage.js`: validated local profile and draft storage (with tests).
+- `styles/`: `index.css` (fonts, Tailwind, globals), `motion.css` (all animations), and one stylesheet per screen.
 - `frontend/vite.config.js`: React and Tailwind build integration.

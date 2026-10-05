@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { getTheme } from '../data/themes.js';
-import BookDetailsModal from '../features/shelf/BookDetailsModal.jsx';
-import ShelfView from '../features/shelf/ShelfView.jsx';
-import { DecorPair, FlowNav } from '../shared/FlowShell.jsx';
-import '../styles/shelf-page.css';
+import { getTheme } from '../../data/themes.js';
+import BookDetailsModal from './BookDetailsModal.jsx';
+import ShelfView from './ShelfView.jsx';
+import { DecorPair, FlowNav } from '../../components/FlowShell.jsx';
+import '../../styles/shelf-page.css';
 
 const icons = {
   x: <path fill="currentColor" d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.65l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23zm-1.16 17.52h1.83L7.08 4.13H5.12z" />,
@@ -25,7 +25,7 @@ function ShareButton({ kind, label, href, onClick }) {
     : <button type="button" className="sp-share" data-kind={kind} onClick={onClick}>{content}</button>;
 }
 
-export default function ShelfPreview({ books = [], theme, title, since, isDemo, onSignOut, onModify, onAddBook, onStart }) {
+export default function ShelfLayout({ books = [], theme, title, since, isDemo, onSignOut, onModify, onAddBook, onStart }) {
   const [status, setStatus] = useState('');
   const [selection, setSelection] = useState(null);
   const timer = useRef(0);

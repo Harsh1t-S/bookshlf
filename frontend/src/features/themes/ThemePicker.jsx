@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getTheme, isThemeUnlocked, themes } from '../../data/themes.js';
 import { ThemePreview } from '../shelf/ShelfView.jsx';
-import Modal from '../../shared/Modal.jsx';
+import Modal from '../../components/Modal.jsx';
 
 function badge(theme) {
   return theme.paid ? `PREMIUM - $${theme.usd}` : 'FREE';

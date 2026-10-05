@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import BookCover from '../../shared/BookCover.jsx';
+import BookCover from '../../components/BookCover.jsx';
 import '../../styles/shelf-views.css';
 
 const SPINE_COLORS = [

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import BookCover from '../../shared/BookCover.jsx';
-import Modal from '../../shared/Modal.jsx';
+import BookCover from '../../components/BookCover.jsx';
+import Modal from '../../components/Modal.jsx';
 import '../../styles/reading-book.css';
 
 function ReadingBook({ book, onClose }) {

@@ -105,7 +105,7 @@
   /* Reviews drift sideways in a loop, the second row the other way; hovering pauses them. */
   .say .mq { display: flex; gap: 64px; width: max-content; padding-right: 64px; animation: reviews-drift 46s linear infinite; }
   .say .r2 .mq { animation-direction: reverse; animation-duration: 38s; }
-  .say .r:hover .mq, .say .r:focus-within .mq { animation-play-state: paused; }
+  .say .r:hover .mq, .say .r:has(:focus-visible) .mq { animation-play-state: paused; }
   .tc { position: relative; width: 414px; height: 349px; flex: none; }
   .tc > .v { position: absolute; top: 0; bottom: 0; }
   .tc > .v > div { position: absolute; inset: -9.31% -25.36% -20.77% -25.36%; }

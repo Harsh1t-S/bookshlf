@@ -109,9 +109,9 @@ const readerRows = [
   [['89684.svg', 'd8116.svg'], ['efb74.svg', 'f1cf6.svg'], ['5eac7.svg', 'e4eb1.svg']],
 ];
 
-function Testimonial({ right, left, theme, order }) {
+function Testimonial({ right, left, theme, hidden }) {
   return (
-    <div className="tc" data-reveal style={{ '--d': order }}>
+    <div className="tc" aria-hidden={hidden || undefined}>
       <div className="v" style={{ left: '50%', right: 0 }}><div><img src={a(right)} alt="" /></div></div>
       <p className="q">"Setup took 2 minutes. Literally timed it. Now I have a portfolio that actually represents my work professionally."</p>
       <div className="v" style={{ left: 0, right: '50%' }}><div><img src={a(left)} alt="" /></div></div>
@@ -120,7 +120,7 @@ function Testimonial({ right, left, theme, order }) {
           <div className="av2"><img src={a('reader-avatar.jpg')} alt="" /></div>
           <div className="nm"><b>Aman Gupta</b><span>Simple Themes</span></div>
         </div>
-        <a className="lk" href={`/demo?theme=${theme}`}><img src={a('4606f.svg')} alt="" />View Bookshelf</a>
+        <a className="lk" href={`/demo?theme=${theme}`} tabIndex={hidden ? -1 : undefined}><img src={a('4606f.svg')} alt="" />View Bookshelf</a>
       </div>
     </div>
   );
@@ -263,8 +263,13 @@ export default function LandingPage({ onStart }) {
             <h2 className="h2" style={{ width: '100%' }} data-reveal>What book readers are saying...</h2>
             <div className="rows">
               {readerRows.map((row, index) => (
-                <div className={index ? 'r r2' : 'r'} key={index}>
-                  {row.map(([right, left], cardIndex) => <Testimonial key={cardIndex} right={right} left={left} theme={themes[(index * 4 + cardIndex) % themes.length].id} order={cardIndex} />)}
+                <div className={index ? 'r r2' : 'r'} key={index} data-reveal style={{ '--d': index }}>
+                  {/* Cards repeat once so the loop scrolls seamlessly; the copy is hidden from assistive tech. */}
+                  <div className="mq">
+                    {[false, true].flatMap(hidden => row.map(([right, left], cardIndex) => (
+                      <Testimonial key={`${hidden}-${cardIndex}`} hidden={hidden} right={right} left={left} theme={themes[(index * 4 + cardIndex) % themes.length].id} />
+                    )))}
+                  </div>
                 </div>
               ))}
             </div>

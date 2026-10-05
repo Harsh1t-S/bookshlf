@@ -1,109 +1,29 @@
+// The six shelf looks from the Figma "Choose your look" screen. Cards show the
+// USD badge from the design; checkout charges the INR price plus GST.
+export const GST_RATE = 0.18;
+
 export const themes = [
-  {
-    id: 'simple-grid',
-    name: 'Simple Grid',
-    paid: false,
-    price: 0,
-    layout: 'grid',
-    description: 'Clean minimalist grid on warm paper background',
-    colors: {
-      page: '#faf7f2',
-      headerBg: '#faf7f2',
-      cardBg: '#ffffff',
-      ink: '#27221e',
-      muted: '#81776d',
-      accent: '#e13a00',
-      shelfBorder: '#e8e0d4',
-    },
-  },
-  {
-    id: 'sunny-shelf',
-    name: 'Sunny Shelf',
-    paid: false,
-    price: 0,
-    layout: 'floating',
-    description: 'Radiant warm amber sunset ambience',
-    colors: {
-      page: 'linear-gradient(180deg, #fff3e3 0%, #fae6cb 100%)',
-      headerBg: '#fff3e3',
-      cardBg: '#fffbf5',
-      ink: '#422817',
-      muted: '#9c6f49',
-      accent: '#d96b29',
-      shelfBorder: '#f0d1b2',
-    },
-  },
-  {
-    id: 'midnight-library',
-    name: 'Midnight Library',
-    paid: false,
-    price: 0,
-    layout: 'grid',
-    description: 'Moody dark gallery with illuminated book covers',
-    colors: {
-      page: '#0e1117',
-      headerBg: '#131722',
-      cardBg: '#181e2b',
-      ink: '#f0f3f8',
-      muted: '#8e9bb0',
-      accent: '#e5ad58',
-      shelfBorder: '#232b3d',
-    },
-  },
-  {
-    id: 'minimal-shelf',
-    name: 'Minimal White Shelf',
-    paid: true,
-    price: 9,
-    layout: 'floating',
-    description: 'Clean white floating shelves with star review badges',
-    colors: {
-      page: '#ffffff',
-      headerBg: '#ffffff',
-      cardBg: '#fcfcfc',
-      ink: '#1a1a1a',
-      muted: '#737373',
-      accent: '#e13a00',
-      shelfBorder: '#e5e5e5',
-    },
-  },
-  {
-    id: 'wooden-shelf',
-    name: 'Classic Wooden Shelf',
-    paid: true,
-    price: 15,
-    layout: 'wood',
-    description: 'Realistic oak & walnut wooden bookshelves with 3D depth',
-    colors: {
-      page: '#9c9288',
-      headerBg: '#8c8278',
-      cardBg: 'transparent',
-      ink: '#ffffff',
-      muted: '#e8e4de',
-      accent: '#e13a00',
-      shelfBorder: '#5c4533',
-    },
-  },
-  {
-    id: 'spine-view',
-    name: 'Spine Bookshelf',
-    paid: true,
-    price: 21,
-    layout: 'spine',
-    description: 'Books stacked vertically showing unique colorful spines',
-    colors: {
-      page: '#0d1f16',
-      headerBg: '#091610',
-      cardBg: '#13281e',
-      ink: '#f1f8f3',
-      muted: '#7f9d8b',
-      accent: '#34d399',
-      shelfBorder: '#1c382a',
-    },
-  },
+  { id: 'light-grid', name: 'Light Grid', view: 'grid', variant: 'light', paid: false },
+  { id: 'gradient-grid', name: 'Gradient Grid', view: 'grid', variant: 'gradient', paid: false },
+  { id: 'dark-grid', name: 'Dark Grid', view: 'grid', variant: 'dark', paid: false },
+  { id: 'digital-shelf', name: 'Digital Shelf', view: 'shelf', variant: 'gradient', paid: true, usd: 9, inr: 749 },
+  { id: 'spine-shelf', name: 'Spine Shelf', view: 'spine', variant: 'board', paid: true, usd: 15, inr: 1249 },
+  { id: 'macos', name: 'MacOS', view: 'macos', variant: 'light', paid: true, usd: 21, inr: 1749 },
 ];
 
 export function getTheme(theme) {
   const id = typeof theme === 'string' ? theme : theme?.id;
-  return themes.find((item) => item.id === id) || themes[0];
+  return themes.find(item => item.id === id) || themes[0];
+}
+
+export function isThemeUnlocked(theme, purchasedThemeIds = []) {
+  const chosen = getTheme(theme);
+  return !chosen.paid || purchasedThemeIds.includes(chosen.id);
+}
+
+export function themePrice(theme) {
+  const chosen = getTheme(theme);
+  const subtotal = chosen.inr || 0;
+  const gst = Math.round(subtotal * GST_RATE * 100) / 100;
+  return { subtotal, gst, total: Math.round((subtotal + gst) * 100) / 100 };
 }

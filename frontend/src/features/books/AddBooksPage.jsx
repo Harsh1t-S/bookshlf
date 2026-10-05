@@ -1,446 +1,284 @@
-import { useEffect, useState } from 'react';
-import BookCollection from './BookCollection';
-import BookEditor from './BookEditor';
-import BookCover from '../../shared/BookCover';
+import { useEffect, useRef, useState } from 'react';
+import BookEditor from './BookEditor.jsx';
+import Modal from '../../shared/Modal.jsx';
 
-const options = [
-  {
-    id: 'goodreads',
-    icon: (
-      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm0-8h-2V7h2v2zm6 8h-2v-4c0-.55-.45-1-1-1s-1 .45-1 1v4h-2v-6h2v1.1c.4-.7 1.2-1.1 2-1.1 1.66 0 3 1.34 3 3v3z" />
-      </svg>
-    ),
-    title: 'Connect Goodreads',
-    description: 'Bring your reading shelves along.',
-    link: 'Import unavailable',
-  },
-  {
-    id: 'photo',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-    title: 'Photograph your shelves',
-    description: 'Start with a photo of your books.',
-    link: 'Choose a photo →',
-  },
-  {
-    id: 'browse',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-    ),
-    title: 'Browse our library',
-    description: 'Find books and add them one by one.',
-    link: 'Search books →',
-  },
+const SYNC_DELAY = 1800;
+
+const methods = [
+  { id: 'goodreads', icon: '📖', title: 'Connect Goodreads', sub: 'Import your read shelves', link: 'Connect account →' },
+  { id: 'photo', icon: '📷', title: 'Photograph your shelves', sub: 'We read the spines for you', link: 'Upload a photo →' },
+  { id: 'library', icon: '🔍', title: 'Browse our library', sub: 'Search and pick titles', link: 'Search books →' },
 ];
-
-const inputClass =
-  'w-full rounded-xl border border-[#d6cec2] bg-white px-4 py-3 text-sm text-[#34291f] outline-none transition focus:border-[#e13a00] focus:ring-1 focus:ring-[#e13a00]';
 
 function bookKey(book) {
   const normalize = (value = '') => value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
   return `${normalize(book.title)}\u0000${normalize(book.author)}`;
 }
 
-export default function AddBooksPage({
-  books = [],
-  onBooksChange = () => {},
-  onContinue,
-  onBack,
-  catalog = [],
-}) {
+function newBookId() {
+  return `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function BookCard({ book, action, onAction, selected }) {
+  return (
+    <div className="fg-book" data-selected={selected || undefined}>
+      <div className="fg-book__cover">
+        {book.cover && /^(https?:\/\/|\/)/.test(book.cover)
+          ? <img src={book.cover} alt="" loading="lazy" />
+          : <span style={{ background: book.color || '#7d3c1c' }}>{book.title}</span>}
+      </div>
+      <div className="fg-book__text">
+        <span className="fg-book__title">{book.title}</span>
+        <span className="fg-book__author">{book.author}</span>
+        <button type="button" className="fg-book__action" onClick={onAction} aria-label={`${action}: ${book.title}`}>{action}</button>
+      </div>
+    </div>
+  );
+}
+
+function Alert({ tone, children }) {
+  return (
+    <div className="fg-alert" data-tone={tone} role="status">
+      {tone === 'success' ? <span aria-hidden="true">✅</span> : <i className="fg-alert__spinner" aria-hidden="true" />}
+      <span>{children}</span>
+    </div>
+  );
+}
+
+export default function AddBooksPage({ books = [], catalog = [], onBooksChange, onContinue }) {
   const [mode, setMode] = useState('goodreads');
-  const [photoMessage, setPhotoMessage] = useState('');
+  const [goodreadsId, setGoodreadsId] = useState('');
+  const [goodreadsError, setGoodreadsError] = useState('');
+  const [goodreadsPhase, setGoodreadsPhase] = useState('idle');
+  const [photoPhase, setPhotoPhase] = useState('idle');
+  const [photoError, setPhotoError] = useState('');
+  const [dragOver, setDragOver] = useState(false);
   const [query, setQuery] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [manualOpen, setManualOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [removedBook, setRemovedBook] = useState(null);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [editor, setEditor] = useState(null);
+  const timers = useRef([]);
+  const searchRef = useRef(null);
 
-  useEffect(() => () => {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-  }, [photoUrl]);
+  useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
-  function addBook(book) {
-    const id = book.id ?? `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const duplicate = books.some((item) => item.id === id || bookKey(item) === bookKey(book));
-    if (duplicate) {
-      const message = `${book.title} by ${book.author} is already on your shelf.`;
-      setStatusMessage(message);
-      return message;
+  useEffect(() => {
+    if (!resultsOpen) return undefined;
+    function close(event) {
+      if (!searchRef.current?.contains(event.target)) setResultsOpen(false);
     }
-    onBooksChange([...books, { ...book, id }]);
-    setStatusMessage(`${book.title} was added to your shelf.`);
-    setRemovedBook(null);
-    return true;
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [resultsOpen]);
+
+  function later(callback) {
+    timers.current.push(window.setTimeout(callback, SYNC_DELAY));
+  }
+
+  // Goodreads and photo recognition are simulated with titles from the local catalog.
+  function importBooks(source, picks) {
+    const keys = new Set(books.map(bookKey));
+    const added = picks.filter(book => !keys.has(bookKey(book))).map(book => ({ ...book, source }));
+    onBooksChange([...books, ...added]);
+  }
+
+  function fetchGoodreads(event) {
+    event.preventDefault();
+    if (!goodreadsId.trim()) {
+      setGoodreadsError('Paste your Goodreads username or profile ID first.');
+      return;
+    }
+    setGoodreadsError('');
+    setGoodreadsPhase('syncing');
+    later(() => {
+      importBooks('goodreads', catalog.slice(0, 6));
+      setGoodreadsPhase('done');
+    });
+  }
+
+  function readPhoto(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Choose an image file (JPG, PNG or HEIC) of your bookshelf.');
+      return;
+    }
+    setPhotoError('');
+    setPhotoPhase('analyzing');
+    later(() => {
+      importBooks('photo', catalog.slice(6, 12));
+      setPhotoPhase('done');
+    });
+  }
+
+  function toggleLibraryBook(book) {
+    const existing = books.find(item => bookKey(item) === bookKey(book));
+    if (existing) onBooksChange(books.filter(item => item.id !== existing.id));
+    else onBooksChange([...books, { ...book, source: 'library' }]);
+  }
+
+  function removeBook(book) {
+    onBooksChange(books.filter(item => item.id !== book.id));
+    setEditor(null);
   }
 
   function saveBook(book) {
-    if (editing) {
-      const duplicate = books.some((item) =>
-        item.id !== editing.id && bookKey(item) === bookKey(book)
-      );
-      if (duplicate) {
-        return `${book.title} by ${book.author} is already on your shelf.`;
-      }
-      onBooksChange(books.map((item) => (item.id === editing.id ? { ...item, ...book } : item)));
-      setStatusMessage(`${book.title} details were updated.`);
-    } else {
-      const result = addBook(book);
-      if (result !== true) return result;
-    }
-    setEditing(null);
-    setManualOpen(false);
+    const clash = books.some(item => item.id !== book.id && bookKey(item) === bookKey(book));
+    if (clash) return `${book.title} by ${book.author} is already on your shelf.`;
+    if (book.id) onBooksChange(books.map(item => (item.id === book.id ? { ...item, ...book } : item)));
+    else onBooksChange([...books, { ...book, id: newBookId(), source: editor.source }]);
+    setEditor(null);
     return true;
   }
 
-  function removeBook(id) {
-    const index = books.findIndex((book) => book.id === id);
-    if (index < 0) return;
-    const [book] = books.slice(index, index + 1);
-    setRemovedBook({ book, index });
-    onBooksChange(books.filter((item) => item.id !== id));
-    if (editing?.id === id) setEditing(null);
-    setStatusMessage(`${book.title} was removed from your shelf.`);
-  }
+  const fromSource = source => books.filter(book => (source === 'library' ? !book.source || book.source === 'library' : book.source === source));
+  const goodreadsBooks = fromSource('goodreads');
+  const photoBooks = fromSource('photo');
+  const libraryBooks = fromSource('library');
+  const needle = query.trim().toLocaleLowerCase();
+  const results = needle ? catalog.filter(book => `${book.title} ${book.author}`.toLocaleLowerCase().includes(needle)) : [];
+  const shelfKeys = new Set(books.map(bookKey));
 
-  function undoRemove() {
-    if (!removedBook) return;
-    if (books.some((book) => bookKey(book) === bookKey(removedBook.book))) {
-      setStatusMessage('That book is already on your shelf, so it could not be restored.');
-      setRemovedBook(null);
-      return;
-    }
-    const nextBooks = [...books];
-    nextBooks.splice(Math.min(removedBook.index, nextBooks.length), 0, removedBook.book);
-    onBooksChange(nextBooks);
-    setStatusMessage(`${removedBook.book.title} was restored to your shelf.`);
-    setRemovedBook(null);
-  }
-
-  const library = catalog.map((book, index) => ({
-    ...book,
-    id: book.id ?? `catalog-${index}`,
-  }));
-
-  const filtered = library.filter((book) =>
-    `${book.title} ${book.author}`.toLowerCase().includes(query.trim().toLowerCase())
+  const listHead = (title, source) => (
+    <div className="fg-list-head">
+      <h3>{title}</h3>
+      <button type="button" className="fg-outline" onClick={() => setEditor({ source })}>Add Book Manually</button>
+    </div>
   );
 
-  const loadSamples = () => {
-    const keys = new Set(books.map(bookKey));
-    const ids = new Set(books.map((book) => book.id));
-    const samples = library.slice(0, 6).filter((item) => {
-      const key = bookKey(item);
-      if (keys.has(key) || ids.has(item.id)) return false;
-      keys.add(key);
-      ids.add(item.id);
-      return true;
-    });
-    onBooksChange([...books, ...samples]);
-    setStatusMessage(samples.length
-      ? `Added ${samples.length} sample books from the local catalog.`
-      : 'All local sample books are already on your shelf.');
-    setRemovedBook(null);
-  };
-
-  function selectPhoto(event) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setPhotoUrl('');
-      setPhotoMessage('Choose an image file to preview your bookshelf photo.');
-      return;
-    }
-    setPhotoMessage('');
-    setPhotoUrl(URL.createObjectURL(file));
-  }
+  const editableGrid = list => (
+    <div className="fg-book-grid">
+      {list.map(book => <BookCard key={book.id} book={book} action="Edit Details" onAction={() => setEditor({ book })} />)}
+    </div>
+  );
 
   return (
-    <main className="mx-auto w-full max-w-[980px] px-5 pb-16 pt-6 sm:px-8">
-      {onBack && (
-        <button
-          type="button"
-          onClick={onBack}
-          className="mb-4 inline-flex items-center text-sm font-medium text-[#734021] hover:underline"
-        >
-          ← Back
-        </button>
-      )}
-
-      <header className="text-center">
-        <h1 className="font-heading text-[32px] font-bold leading-tight tracking-[-0.035em] text-[#2c231c] sm:text-[40px]">
-          Add your books
-        </h1>
-        <p className="mt-2 text-base text-[#776e65]">
-          Choose how you’d like to populate your bookshelf.
-        </p>
-      </header>
-
-      {/* 3 Top Method Cards matching Figma */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        {options.map((item) => {
-          const active = mode === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setMode(item.id)}
-              aria-pressed={active}
-              className={`flex flex-col justify-between rounded-[16px] border bg-white p-6 text-left transition ${
-                active
-                  ? 'border-[#784322] border-l-[6px] shadow-[0_4px_16px_rgba(85,54,29,0.08)]'
-                  : 'border-[#e8e2d8] hover:border-[#cdb9a5]'
-              }`}
-            >
-              <div>
-                <span className={`inline-block ${active ? 'text-[#e13a00]' : 'text-[#81776d]'}`}>
-                  {item.icon}
-                </span>
-                <h2 className="mt-4 font-serif text-[20px] font-bold text-[#2d241c]">
-                  {item.title}
-                </h2>
-                <p className="mt-1 text-xs text-[#81776d] leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-              <span className="mt-4 inline-flex items-center text-xs font-bold text-[#e13a00]">
-                {item.link}
-              </span>
-            </button>
-          );
-        })}
+    <div className="fg-books">
+      <div className="fg-head">
+        <h1>Add your books</h1>
+        <p>Choose how you'd like to populate your bookshelf.</p>
       </div>
 
-      {/* Active Method Panel */}
-      <section className="mt-5 rounded-[18px] border border-[#e8e2d8] bg-white p-6 shadow-xs">
-        {mode === 'goodreads' && (
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="font-serif text-xl font-bold text-[#2d241c]">Goodreads import</h3>
-                <p className="mt-1 text-xs text-[#81776d]">
-                  Goodreads import is unavailable in this browser preview. Browse the local catalog instead.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMode('browse')}
-                className="rounded-full border border-[#e13a00] px-4 py-1.5 text-xs font-semibold text-[#e13a00] hover:bg-[#fff5f0]"
-              >
-                Browse local books
-              </button>
-            </div>
-
-            <p className="mt-3 text-xs text-[#81776d]">No Goodreads account details or password are requested.</p>
-          </div>
-        )}
-
-        {mode === 'photo' && (
-          <div>
-            <h3 className="font-serif text-xl font-bold text-[#2d241c]">Photograph your shelves</h3>
-            <p className="mt-1 text-xs text-[#81776d]">
-              Upload a bookshelf photo for reference, then add the titles manually.
-            </p>
-
-            <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d6cec2] bg-[#fffdfa] p-6 text-center hover:border-[#e13a00]">
-              <svg className="h-8 w-8 text-[#9b8d7e]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span className="mt-2 text-sm font-semibold text-[#2d241c]">Choose a bookshelf photo</span>
-              <span className="mt-0.5 text-xs text-[#81776d]">Image files only</span>
-              <input aria-label="Choose a bookshelf photo" type="file" accept="image/*" className="sr-only" onChange={selectPhoto} />
-            </label>
-
-            {photoMessage && <p role="alert" className="mt-3 text-xs text-[#a34222]">{photoMessage}</p>}
-
-            {photoUrl && (
-              <div className="mt-4 flex flex-col items-center sm:flex-row sm:gap-6">
-                <img src={photoUrl} alt="Bookshelf capture" className="h-36 rounded-lg object-cover shadow-sm" />
-                <div className="mt-3 sm:mt-0">
-                  <p className="text-xs font-semibold text-[#2d241c]">Photo preview ready. Book recognition is unavailable.</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditing(null);
-                      setManualOpen(true);
-                      window.setTimeout(() => document.getElementById('manual-book-editor')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0);
-                    }}
-                    className="mt-2 rounded-xl bg-[#e13a00] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#c93200]"
-                  >
-                    Add book details manually
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {mode === 'browse' && (
-          <div>
-            <h3 className="font-serif text-xl font-bold text-[#2d241c]">Browse library</h3>
-            <p className="mt-1 text-xs text-[#81776d]">
-              Search titles and authors in the local catalog, then add books to your shelf.
-            </p>
-
-            <label htmlFor="catalog-search" className="mt-4 block text-xs font-semibold text-[#544b42]">
-              Search by title or author
-            </label>
-            <div className="mt-1">
-              <input
-                id="catalog-search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by title or author"
-                className={inputClass}
-              />
-            </div>
-
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="mt-2 text-xs font-semibold text-[#e13a00] underline-offset-2 hover:underline"
-              >
-                Clear search
-              </button>
-            )}
-
-            <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
-              {filtered.map((book) => {
-                const isAdded = books.some((item) => bookKey(item) === bookKey(book));
-                return (
-                  <div
-                    key={book.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[#f0eae1] bg-[#fffdfa] p-2.5 transition hover:border-[#e13a00]/30"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-[34px] shrink-0">
-                        <BookCover book={book} className="aspect-[1/1.5] w-full" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-[#2d241c]">{book.title}</p>
-                        <p className="truncate text-xs text-[#81776d]">{book.author}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => addBook(book)}
-                      disabled={isAdded}
-                      className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                        isAdded
-                          ? 'bg-emerald-50 text-emerald-600'
-                          : 'bg-[#e13a00] text-white hover:bg-[#c93200]'
-                      }`}
-                    >
-                      {isAdded ? '✓ Added' : '+ Add'}
-                    </button>
-                  </div>
-                );
-              })}
-              {filtered.length === 0 && (
-                <p className="py-8 text-center text-sm text-[#81776d]" role="status">
-                  {library.length === 0
-                    ? 'The local catalog has no books yet.'
-                    : query.trim()
-                      ? `No books match “${query.trim()}”. Try a different title or author.`
-                      : 'No books are available in the local catalog yet.'}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Bookshelf Collection */}
-      <section className="mt-6 rounded-[18px] border border-[#e8e2d8] bg-white p-6 shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-4">
-          <div>
-            <h2 className="font-serif text-[22px] font-bold text-[#2d241c]">
-              Your bookshelf ({books.length})
-            </h2>
-            <p className="text-xs text-[#81776d]">
-              {books.length === 0
-                ? 'Your shelf is currently empty. Add books above.'
-                : 'Books on your shelf.'}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEditing(null);
-              setManualOpen(true);
-            }}
-            className="rounded-full border border-[#e13a00] px-4 py-2 text-xs font-semibold text-[#e13a00] hover:bg-[#fff5f0]"
-          >
-            + Add manually
+      <div className="fg-methods" role="group" aria-label="Ways to add books">
+        {methods.map(method => (
+          <button key={method.id} type="button" className="fg-method" aria-pressed={mode === method.id} onClick={() => setMode(method.id)}>
+            <span className="fg-method__icon" aria-hidden="true">{method.icon}</span>
+            <span className="fg-method__title">{method.title}</span>
+            <span className="fg-method__sub">{method.sub}</span>
+            <span className="fg-method__link">{method.link}</span>
           </button>
-        </div>
+        ))}
+      </div>
 
-        {manualOpen && (
-          <div id="manual-book-editor">
-            <BookEditor onSave={saveBook} onCancel={() => setManualOpen(false)} />
-          </div>
-        )}
+      {mode === 'goodreads' && (
+        <section className="fg-panel" aria-label="Connect Goodreads">
+          {goodreadsPhase === 'idle' && (
+            <form onSubmit={fetchGoodreads} noValidate>
+              <h2>Sync with Goodreads</h2>
+              <p className="fg-panel__desc">Enter your Goodreads username or profile ID. We will extract your ‘Currently Reading’ and ‘Read’ Shelves.</p>
+              <label className="fg-panel__label" htmlFor="goodreads-id">Paste your Goodreads ID here</label>
+              <div className="fg-sync">
+                <input
+                  id="goodreads-id"
+                  className="fg-input"
+                  value={goodreadsId}
+                  onChange={event => setGoodreadsId(event.target.value)}
+                  placeholder="Paste here"
+                  autoComplete="off"
+                  aria-describedby={goodreadsError ? 'goodreads-error' : undefined}
+                />
+                <button type="submit" className="fg-cta">Fetch My Goodreads Shelf</button>
+              </div>
+              {goodreadsError && <p id="goodreads-error" className="fg-field-error" role="alert">{goodreadsError}</p>}
+            </form>
+          )}
+          {goodreadsPhase === 'syncing' && <Alert>Trying to connect with Goodreads, and syncing your books...</Alert>}
+          {goodreadsPhase === 'done' && (
+            <>
+              <Alert tone="success">Connection with Goodreads Verified!</Alert>
+              {listHead(`Imported books from Goodreads (${goodreadsBooks.length})`, 'goodreads')}
+              {editableGrid(goodreadsBooks)}
+            </>
+          )}
+        </section>
+      )}
 
-        {statusMessage && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#6e5845]" role="status" aria-live="polite">
-            <span>{statusMessage}</span>
-            {removedBook && (
-              <button type="button" onClick={undoRemove} className="font-semibold text-[#e13a00] underline-offset-2 hover:underline">
-                Undo
-              </button>
+      {mode === 'photo' && (
+        <section className="fg-panel" aria-label="Photograph your shelves">
+          {photoPhase === 'idle' && (
+            <>
+              <h2>Scan Your Physical Bookshelf Photo</h2>
+              <p className="fg-panel__desc">Upload a clear photo of your bookshelf or book stack. Our Gemini vision engine reads the spines and populates your virtual bookshelf.</p>
+              <label
+                className="fg-drop"
+                data-over={dragOver}
+                onDragOver={event => { event.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={event => { event.preventDefault(); setDragOver(false); readPhoto(event.dataTransfer.files?.[0]); }}
+              >
+                Click to select or drag and drop a bookshelf photo
+                <input type="file" accept="image/*" className="sr-only" onChange={event => { readPhoto(event.target.files?.[0]); event.target.value = ''; }} />
+              </label>
+              {photoError && <p className="fg-field-error" role="alert">{photoError}</p>}
+            </>
+          )}
+          {photoPhase === 'analyzing' && <Alert>Analyzing bookshelf image with Gemini Vision to extract book titles &amp; authors...</Alert>}
+          {photoPhase === 'done' && (
+            <>
+              <Alert tone="success">Recognized {photoBooks.length} {photoBooks.length === 1 ? 'book' : 'books'} from the photo.</Alert>
+              {listHead(`Recognized Books (${photoBooks.length})`, 'photo')}
+              {editableGrid(photoBooks)}
+            </>
+          )}
+        </section>
+      )}
+
+      {mode === 'library' && (
+        <section className="fg-panel" aria-label="Browse our library">
+          <h2><label htmlFor="library-search">Book Library</label></h2>
+          <div className="fg-search" ref={searchRef}>
+            <input
+              id="library-search"
+              className="fg-input"
+              type="search"
+              value={query}
+              data-open={resultsOpen && Boolean(needle)}
+              onChange={event => { setQuery(event.target.value); setResultsOpen(true); }}
+              onFocus={() => setResultsOpen(true)}
+              onKeyDown={event => { if (event.key === 'Escape') setResultsOpen(false); }}
+              placeholder="Search books by title, author or keyword"
+              autoComplete="off"
+              aria-controls="library-results"
+              aria-expanded={resultsOpen && Boolean(needle)}
+            />
+            {resultsOpen && needle && (
+              <div className="fg-results" id="library-results">
+                {results.length ? (
+                  <div className="fg-book-grid">
+                    {results.map(book => {
+                      const picked = shelfKeys.has(bookKey(book));
+                      return <BookCard key={book.id} book={book} selected={picked} action={picked ? 'Selected' : 'Select'} onAction={() => toggleLibraryBook(book)} />;
+                    })}
+                  </div>
+                ) : <p className="fg-results__empty">No books match “{query.trim()}”. Try another title or author, or add it manually below.</p>}
+              </div>
             )}
           </div>
-        )}
-
-        {books.length > 0 ? (
-          <BookCollection
-            books={books}
-            editing={editing}
-            onEdit={(b) => {
-              setManualOpen(false);
-              setEditing(b);
-            }}
-            onRemove={removeBook}
-            onSave={saveBook}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          !manualOpen && (
-            <div className="py-12 text-center text-sm text-[#81776d]">
-              <p>No books added yet.</p>
-              <button
-                type="button"
-                onClick={loadSamples}
-                className="mt-2 text-xs font-semibold text-[#e13a00] hover:underline"
-              >
-                Click here to load sample reading shelf
-              </button>
+          {listHead(`Selected Books (${libraryBooks.length})`, 'library')}
+          {libraryBooks.length > 0 && (
+            <div className="fg-book-grid">
+              {libraryBooks.map(book => <BookCard key={book.id} book={book} action="Remove" onAction={() => removeBook(book)} />)}
             </div>
-          )
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
-      {/* Continue CTA */}
-      <button
-        type="button"
-        disabled={books.length === 0}
-        onClick={onContinue}
-        className="mt-8 h-14 w-full rounded-xl bg-[#e13a00] text-base font-semibold text-white shadow-[0_4px_14px_rgba(225,58,0,0.25)] transition hover:bg-[#c93200] disabled:cursor-not-allowed disabled:bg-[#d8c8ba] disabled:shadow-none"
-      >
-        Continue to Shelf Preview
-      </button>
-    </main>
+      {books.length > 0 && <button type="button" className="fg-cta" onClick={onContinue}>Continue Creating Shelf</button>}
+
+      {editor && (
+        <Modal onClose={() => setEditor(null)} labelledBy="book-editor-heading" className="fg-edit-dialog">
+          <h2 id="book-editor-heading" className="sr-only">{editor.book ? 'Edit book details' : 'Add a book manually'}</h2>
+          <BookEditor book={editor.book} onSave={saveBook} onCancel={() => setEditor(null)} onRemove={removeBook} />
+        </Modal>
+      )}
+    </div>
   );
 }

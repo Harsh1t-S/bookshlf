@@ -3,16 +3,27 @@ import AddBooksPage from './features/books/AddBooksPage.jsx';
 import ThemePicker from './features/themes/ThemePicker.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
+import PurchasePage from './pages/PurchasePage.jsx';
 import ShelfPreview from './pages/ShelfPreview.jsx';
-import { getTheme } from './data/themes.js';
 import catalog from './data/books.js';
+import { getTheme, isThemeUnlocked, themes } from './data/themes.js';
 import useBrowserRouter from './hooks/useBrowserRouter.js';
 import { clearProfile, readDraft, readProfile, saveDraft, saveProfile } from './lib/browserStorage.js';
-import BookDecorations from './shared/BookDecorations.jsx';
-import SiteHeader from './shared/SiteHeader.jsx';
+import FlowShell from './shared/FlowShell.jsx';
+
+const ROUTES = ['/', '/login', '/signup', '/themes', '/purchase', '/books', '/shelf', '/demo'];
 
 function normalizePath(pathname) {
   return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+}
+
+function searchParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+
+function firstName(name = '') {
+  const first = name.trim().split(/\s+/)[0] || '';
+  return first ? `${first.charAt(0).toLocaleUpperCase()}${first.slice(1)}` : '';
 }
 
 export default function App() {
@@ -20,9 +31,8 @@ export default function App() {
   const pathname = normalizePath(currentPath);
   const [user, setUser] = useState(readProfile);
   const [draft, setDraft] = useState(readDraft);
-  const { books, themeId } = draft;
+  const { books, themeId, purchasedThemeIds } = draft;
   const theme = getTheme(themeId);
-  const isDemo = pathname === '/demo';
 
   useEffect(() => {
     saveDraft(draft);
@@ -30,17 +40,27 @@ export default function App() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-    const target = document.querySelector('main h1, main h2, main') ?? document.body;
+    const target = document.querySelector('main h1, h1, main') ?? document.body;
     target.setAttribute?.('tabindex', '-1');
     target.focus?.({ preventScroll: true });
   }, [pathname]);
 
-  function selectTheme(nextTheme) {
-    setDraft(current => ({ ...current, themeId: getTheme(nextTheme).id }));
+  const purchaseTheme = getTheme(searchParam('theme'));
+  const needsPurchase = pathname === '/purchase' && isThemeUnlocked(purchaseTheme, purchasedThemeIds);
+  useEffect(() => {
+    if (needsPurchase) navigate('/themes', { replace: true });
+  }, [needsPurchase, navigate]);
+
+  function updateDraft(changes) {
+    setDraft(current => ({ ...current, ...changes }));
   }
 
-  function finishAuth({ email, name } = {}) {
-    const profile = saveProfile({ email, name });
+  function startSetup() {
+    navigate(user ? (books.length ? '/shelf' : '/themes') : '/signup');
+  }
+
+  function finishAuth({ email, name }) {
+    const profile = saveProfile({ email, name, since: readProfile()?.since ?? new Date().getFullYear() });
     if (!profile) return;
     setUser(profile);
     navigate(books.length ? '/shelf' : '/themes');
@@ -52,78 +72,109 @@ export default function App() {
     navigate('/');
   }
 
-  const headers = {
-    currentPath: pathname,
-    user,
-    navigate,
-    onSignOut: signOut,
-  };
+  function continueFromThemes() {
+    if (isThemeUnlocked(theme, purchasedThemeIds)) navigate('/books');
+    else navigate(`/purchase?theme=${theme.id}`);
+  }
 
-  if (!['/', '/login', '/signup', '/themes', '/books', '/shelf', '/demo'].includes(pathname)) {
+  function completePurchase({ themeId: paidThemeId }) {
+    updateDraft({ themeId: paidThemeId, purchasedThemeIds: [...new Set([...purchasedThemeIds, paidThemeId])] });
+    navigate('/themes');
+  }
+
+  const authLink = user
+    ? <button type="button" className="fg-nav-link" onClick={signOut}>Sign out</button>
+    : <a className="fg-nav-link" href="/login">Sign in</a>;
+
+  if (!ROUTES.includes(pathname)) {
     return (
-      <div className="min-h-screen bg-[#faf7f2] text-[#27221e]">
-        <SiteHeader {...headers} />
-        <main className="mx-auto max-w-xl px-6 py-24 text-center">
-          <h1 className="font-heading text-4xl">Page not found</h1>
-          <p className="mt-3 text-[#706a61]">That Bookshelf.cv page doesn’t exist.</p>
-          <a href="/" className="mt-6 inline-block font-semibold text-[#e13a00] underline">Return home</a>
-        </main>
-      </div>
+      <FlowShell navRight={authLink}>
+        <div className="fg-themes fg-head">
+          <h1>Page not found</h1>
+          <p>That Bookshelf.cv page doesn’t exist.</p>
+          <a className="fg-nav-link" href="/" style={{ marginTop: 16 }}>Return home</a>
+        </div>
+      </FlowShell>
     );
   }
 
-  const activePath = pathname === '/' ? 'landing'
-    : pathname === '/login' || pathname === '/signup' ? 'auth'
-      : pathname.slice(1);
+  if (pathname === '/') return <LandingPage onStart={startSetup} />;
 
+  if (pathname === '/login' || pathname === '/signup') {
+    return (
+      <AuthPage
+        key={pathname}
+        mode={pathname === '/login' ? 'login' : 'signup'}
+        onModeChange={mode => navigate(mode === 'login' ? '/login' : '/signup')}
+        onContinue={finishAuth}
+      />
+    );
+  }
+
+  if (pathname === '/themes') {
+    return (
+      <FlowShell navRight={authLink}>
+        <ThemePicker
+          selectedTheme={theme}
+          books={books.length ? books : catalog}
+          purchasedThemeIds={purchasedThemeIds}
+          onSelect={chosen => updateDraft({ themeId: chosen.id })}
+          onBuy={chosen => navigate(`/purchase?theme=${chosen.id}`)}
+          onContinue={continueFromThemes}
+        />
+      </FlowShell>
+    );
+  }
+
+  if (pathname === '/purchase') {
+    return (
+      <PurchasePage
+        key={purchaseTheme.id}
+        theme={purchaseTheme}
+        name={user?.name ?? ''}
+        email={user?.email ?? ''}
+        onBack={() => navigate('/themes')}
+        onPaid={completePurchase}
+      />
+    );
+  }
+
+  if (pathname === '/books') {
+    return (
+      <FlowShell navRight={authLink}>
+        <AddBooksPage
+          books={books}
+          catalog={catalog}
+          onBooksChange={nextBooks => updateDraft({ books: nextBooks })}
+          onContinue={() => navigate('/shelf')}
+        />
+      </FlowShell>
+    );
+  }
+
+  if (pathname === '/demo') {
+    return (
+      <ShelfPreview
+        isDemo
+        books={catalog}
+        theme={themes.find(item => item.id === searchParam('theme')) ?? themes[0]}
+        title="Sarah’s Reading Life"
+        since={2019}
+        onStart={startSetup}
+      />
+    );
+  }
+
+  const owner = firstName(user?.name);
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#faf7f2] text-[#27221e]">
-      <BookDecorations variant={activePath === 'landing' ? 'landing' : activePath === 'shelf' || isDemo ? 'none' : 'setup'} />
-      <div className="relative z-10">
-        <SiteHeader {...headers} />
-        {pathname === '/' && (
-          <LandingPage
-            onStart={() => navigate(user ? (books.length ? '/shelf' : '/themes') : '/signup')}
-            onDemo={() => navigate('/demo')}
-          />
-        )}
-        {(pathname === '/login' || pathname === '/signup') && (
-          <AuthPage
-            key={pathname}
-            mode={pathname === '/login' ? 'login' : 'signup'}
-            onModeChange={mode => navigate(mode === 'login' || mode === 'signin' ? '/login' : '/signup')}
-            onContinue={finishAuth}
-          />
-        )}
-        {pathname === '/themes' && (
-          <ThemePicker
-            selectedTheme={theme}
-            books={books.length ? books : catalog}
-            onSelect={selectTheme}
-            onBack={() => navigate(user ? (books.length ? '/shelf' : '/') : '/')}
-            onContinue={() => navigate('/books')}
-          />
-        )}
-        {pathname === '/books' && (
-          <AddBooksPage
-            books={books}
-            catalog={catalog}
-            onBooksChange={nextBooks => setDraft(current => ({ ...current, books: nextBooks }))}
-            onBack={() => navigate('/themes')}
-            onContinue={() => navigate('/shelf')}
-          />
-        )}
-        {(pathname === '/shelf' || isDemo) && (
-          <ShelfPreview
-            books={isDemo ? catalog : books}
-            theme={theme}
-            name={isDemo ? 'Sarah' : user?.name || 'Your'}
-            navigate={navigate}
-            onEdit={() => navigate('/books')}
-            onThemes={() => navigate('/themes')}
-          />
-        )}
-      </div>
-    </div>
+    <ShelfPreview
+      books={books}
+      theme={isThemeUnlocked(theme, purchasedThemeIds) ? theme : themes[0]}
+      title={owner ? `${owner}’s Reading Life` : 'Your Reading Life'}
+      since={user?.since ?? new Date().getFullYear()}
+      onSignOut={signOut}
+      onModify={() => navigate('/themes')}
+      onAddBook={() => navigate('/books')}
+    />
   );
 }

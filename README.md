@@ -26,18 +26,29 @@ npm run preview
 
 ## Features and limits
 
-- Browse a local catalog of twelve books, add books manually, or load sample
-  books. Goodreads sync and image recognition are unavailable in this preview.
-- Choose from the included shelf themes and preview the resulting bookshelf.
+- Flow from the Figma file: landing → sign up → choose a look → (checkout for
+  premium looks) → add books → your shelf.
+- Six shelf looks: Light, Gradient and Dark Grid (free), Digital Shelf, Spine
+  Shelf and MacOS (premium, ₹749 / ₹1,249 / ₹1,749 + 18% GST).
+- Add books by Goodreads, shelf photo or the local catalog, or manually.
+  Goodreads sync and photo recognition are simulated with catalog titles.
 - Browser routes support direct links and refresh: `/`, `/login`, `/signup`,
-  `/themes`, `/books`, `/shelf`, and `/demo`.
-- The landing page's demo opens a sample shelf without changing the books in
-  the current draft.
-- The preview profile and bookshelf draft are saved in local storage for this
-  browser. Signing out clears the local profile and keeps the shelf draft.
-- Login and signup create only a local preview identity. There is no server
-  authentication, and passwords or tokens are never stored. Google sign-in,
-  payments, and publishing are not connected to a backend.
+  `/themes`, `/purchase?theme=<id>`, `/books`, `/shelf`, and `/demo?theme=<id>`.
+- The preview profile, shelf draft and purchased looks are saved in local
+  storage for this browser. Login and signup create only a local preview
+  identity; passwords are never stored. Google sign-in is not connected.
+
+## Razorpay (test mode)
+
+Premium looks are paid through Razorpay Checkout in test mode. Copy
+`frontend/.env.example` to `frontend/.env.local`, set `VITE_RAZORPAY_KEY_ID` to
+your `rzp_test_…` key id, and restart `npm run dev`. On Vercel, add the same
+variable to the project's environment variables and redeploy.
+
+Pay with Razorpay's test cards or the UPI id `success@razorpay`. There is no
+server yet, so payments are created without an order and are not signature
+verified; Razorpay refunds such payments automatically. Live keys are refused
+until an order-creation and verification endpoint is added.
 
 ## Structure
 
@@ -46,9 +57,11 @@ npm run preview
 - `frontend/src/hooks/useBrowserRouter.js`: native History API navigation.
 - `frontend/src/lib/browserStorage.js`: validated local profile and draft storage.
 - `frontend/src/data/`: local book catalog and theme definitions.
-- `frontend/src/pages/`: landing, auth preview, and bookshelf preview screens.
-- `frontend/src/features/themes/`: theme picker and previews.
+- `frontend/src/pages/`: landing, auth, checkout and shelf screens.
+- `frontend/src/features/themes/`: theme picker.
+- `frontend/src/features/shelf/`: the six shelf looks, scaled previews and book details.
+- `frontend/src/lib/razorpay.js`: Razorpay Checkout loader (test mode).
 - `frontend/src/features/books/`: local catalog, add/edit flow, and collection.
-- `frontend/src/shared/`: site header, book cover, and decorative illustrations.
+- `frontend/src/shared/`: page shell with nav and corner books, book cover, modal.
 - `frontend/src/styles/index.css`: font imports, Tailwind theme, and global styles.
 - `frontend/vite.config.js`: React and Tailwind build integration.

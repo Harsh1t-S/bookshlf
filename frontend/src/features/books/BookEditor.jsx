@@ -25,7 +25,7 @@ function isValidCover(value) {
   }
 }
 
-export default function BookEditor({ book, onSave, onCancel }) {
+export default function BookEditor({ book, onSave, onCancel, onRemove }) {
   const [title, setTitle] = useState(book?.title ?? '');
   const [author, setAuthor] = useState(book?.author ?? '');
   const [cover, setCover] = useState(book?.cover ?? '');
@@ -186,6 +186,15 @@ export default function BookEditor({ book, onSave, onCancel }) {
       )}
 
       <div className="mt-5 flex items-center justify-end gap-2 border-t border-black/5 pt-3">
+        {book && onRemove && (
+          <button
+            type="button"
+            onClick={() => onRemove(book)}
+            className="mr-auto rounded-lg px-4 py-2 text-xs font-semibold text-[#a34222] hover:bg-[#fbeee8]"
+          >
+            Remove from shelf
+          </button>
+        )}
         <button
           type="button"
           onClick={onCancel}

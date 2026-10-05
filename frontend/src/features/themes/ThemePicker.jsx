@@ -1,75 +1,74 @@
 import { useState } from 'react';
-import { themes, getTheme } from '../../data/themes';
-import Modal from '../../shared/Modal';
+import { getTheme, isThemeUnlocked, themes } from '../../data/themes.js';
+import { ThemePreview } from '../shelf/ShelfView.jsx';
+import Modal from '../../shared/Modal.jsx';
 
-const thumbnailAssets = {
-  'simple-grid': '/assets/figma-12.png',
-  'sunny-shelf': '/assets/figma-10.png',
-  'midnight-library': '/assets/figma-09.png',
-  'minimal-shelf': '/assets/figma-01.png',
-  'wooden-shelf': '/assets/figma-00.png',
-  'spine-view': '/assets/figma-02.png',
-};
-
-function ThemeThumbnail({ theme }) {
-  return (
-    <img src={thumbnailAssets[theme.id]} alt={`${theme.name} bookshelf theme`} className="h-[122px] w-full object-cover" />
-  );
+function badge(theme) {
+  return theme.paid ? `PREMIUM - $${theme.usd}` : 'FREE';
 }
 
-export default function ThemePicker({ selectedTheme, onSelect = () => {}, onContinue, onBack }) {
-  const [preview, setPreview] = useState(null);
-  const selectedId = typeof selectedTheme === 'string' ? selectedTheme : selectedTheme?.id;
-  const previewTheme = preview ? getTheme(preview) : null;
+export default function ThemePicker({ selectedTheme, books, purchasedThemeIds = [], onSelect, onBuy, onContinue }) {
+  const [previewId, setPreviewId] = useState(null);
+  const selectedId = getTheme(selectedTheme).id;
+  const previewTheme = previewId ? getTheme(previewId) : null;
 
   function choose(theme) {
-    onSelect(theme);
+    if (isThemeUnlocked(theme, purchasedThemeIds)) onSelect(theme);
+    else onBuy(theme);
+  }
+
+  function actionLabel(theme) {
+    if (theme.id === selectedId && isThemeUnlocked(theme, purchasedThemeIds)) return 'Selected';
+    return isThemeUnlocked(theme, purchasedThemeIds) ? 'Select' : 'Select & Buy';
   }
 
   return (
-    <main className="mx-auto w-full max-w-[680px] px-4 pb-10 pt-4 sm:px-0">
-      {onBack && <button type="button" onClick={onBack} className="mb-3 text-sm text-[#8b4b27] hover:underline">← Back</button>}
-      <header className="mb-5 text-center">
-        <h1 className="font-heading text-[36px] font-bold leading-none tracking-[-.035em] text-[#292522] sm:text-[48px]">Choose your look</h1>
-      </header>
+    <div className="fg-themes">
+      <div className="fg-head">
+        <h1>Choose your look</h1>
+        <p>Pick a display style for your bookshelf. You can change it anytime.</p>
+      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      <div className="fg-theme-grid">
         {themes.map(theme => {
-          const active = selectedId === theme.id;
+          const selected = theme.id === selectedId && isThemeUnlocked(theme, purchasedThemeIds);
           return (
-            <article key={theme.id} className={`h-[245px] overflow-hidden rounded-[9px] border bg-white ${active ? 'border-[#e43d00] ring-1 ring-[#e43d00]' : 'border-[#e8e3d8]'}`}>
-              <div className={`flex h-7 items-center justify-center text-[11px] font-bold tracking-[.07em] text-white ${theme.paid ? 'bg-[#da00ec]' : 'bg-[#5a9b63]'}`}>
-                {theme.paid ? 'PREMIUM' : 'FREE'}
-              </div>
-              <ThemeThumbnail theme={theme} />
-              <div className="px-3 pb-3 pt-2 sm:px-3.5">
-                <div className="flex h-7 items-center justify-between gap-1">
-                  <h2 className="truncate font-serif text-[17px] font-normal text-[#292522]">{theme.name}</h2>
-                  <button type="button" onClick={() => setPreview(theme.id)} className="shrink-0 text-xs font-medium text-[#e45a24] hover:underline">Preview</button>
+            <article key={theme.id} className="fg-theme-card" data-selected={selected}>
+              <div className="fg-theme-card__badge" data-paid={theme.paid}>{badge(theme)}</div>
+              <div className="fg-theme-card__thumb"><ThemePreview theme={theme} books={books} /></div>
+              <div className="fg-theme-card__body">
+                <div className="fg-theme-card__row">
+                  <h2>{theme.name}</h2>
+                  <button type="button" onClick={() => setPreviewId(theme.id)} aria-label={`Preview ${theme.name}`}>Preview</button>
                 </div>
-                <button type="button" aria-pressed={active} onClick={() => choose(theme)} className={`mt-2 h-7 w-full rounded-full border text-[11px] font-semibold ${active ? 'border-[#e43d00] bg-[#fff6f1] text-[#c7390c]' : 'border-[#e49b79] text-[#cf4b1b] hover:bg-[#fff7f3]'}`}>
-                  {active ? 'Selected' : 'Select'}
-                </button>
+                <button type="button" className="fg-pick" aria-pressed={selected} onClick={() => choose(theme)}>{actionLabel(theme)}</button>
               </div>
             </article>
           );
         })}
       </div>
 
-      <button type="button" disabled={!selectedId} onClick={onContinue} className="mt-5 h-14 w-full rounded-[14px] bg-[#e43d00] font-semibold text-white shadow-[0_5px_14px_rgba(173,69,25,.2)] hover:bg-[#cc3700] disabled:cursor-not-allowed disabled:bg-[#d8c8ba]">Continue</button>
+      <button type="button" className="fg-cta" onClick={onContinue}>Continue Fetching Books</button>
 
       {previewTheme && (
-        <Modal onClose={() => setPreview(null)} labelledBy="theme-preview-title" className="w-full max-w-[430px] overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4">
-              <h2 id="theme-preview-title" className="text-lg font-bold text-[#292522]">{previewTheme.name} preview</h2>
-              <button type="button" onClick={() => setPreview(null)} aria-label="Close preview" className="rounded-full px-2 py-1 text-xl leading-none text-[#70665d] hover:bg-[#f4f0ea]">×</button>
-            </div>
-            <ThemeThumbnail theme={previewTheme} />
-            <p className="px-5 py-4 text-center text-xs text-[#81776d]">Previewing this look does not select it.</p>
-            <div className="px-5 pb-5"><button type="button" onClick={() => { choose(previewTheme); setPreview(null); }} className="h-10 w-full rounded-full border border-[#e49b79] text-sm font-semibold text-[#cf4b1b]">{selectedId === previewTheme.id ? 'Selected' : 'Select'}</button></div>
+        <Modal onClose={() => setPreviewId(null)} labelledBy="theme-preview-title" className="fg-preview-dialog">
+          <header>
+            <h2 id="theme-preview-title">{previewTheme.name}</h2>
+            <button type="button" onClick={() => setPreviewId(null)} aria-label="Close preview">×</button>
+          </header>
+          <div className="fg-preview-dialog__frame"><ThemePreview theme={previewTheme} books={books} stageWidth={1440} /></div>
+          <footer>
+            <button
+              type="button"
+              className="fg-pick"
+              aria-pressed={previewTheme.id === selectedId && isThemeUnlocked(previewTheme, purchasedThemeIds)}
+              onClick={() => { choose(previewTheme); setPreviewId(null); }}
+            >
+              {actionLabel(previewTheme)}{previewTheme.paid && !isThemeUnlocked(previewTheme, purchasedThemeIds) ? ` · ₹${previewTheme.inr}` : ''}
+            </button>
+          </footer>
         </Modal>
       )}
-
-    </main>
+    </div>
   );
 }

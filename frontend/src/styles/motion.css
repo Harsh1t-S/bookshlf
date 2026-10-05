@@ -1,0 +1,277 @@
+/* Shared motion: entrances, hover and press feedback across the site.
+   Reveal and arrival effects use the individual `translate`/`scale` properties so
+   they never fight the `transform` used by hover states or layout. Reduced motion
+   is handled globally in index.css. */
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@keyframes rise { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
+@keyframes pop { 0% { scale: 1; } 40% { scale: 1.05; } 100% { scale: 1; } }
+@keyframes press-pop { 0% { scale: .94; } 60% { scale: 1.04; } 100% { scale: 1; } }
+@keyframes float { from { translate: 0 0; rotate: 0deg; } to { translate: 0 -12px; rotate: 1.5deg; } }
+@keyframes wiggle { 0%, 100% { rotate: 0deg; } 25% { rotate: -12deg; } 60% { rotate: 9deg; } 80% { rotate: -4deg; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drop-in { from { opacity: 0; translate: 0 -8px; scale: .98; } to { opacity: 1; translate: 0 0; scale: 1; } }
+@keyframes screen-in { from { opacity: 0; scale: 1.04; filter: blur(6px); } to { opacity: 1; scale: 1; filter: blur(0); } }
+@keyframes book-drop { 0% { opacity: 0; translate: 0 -36px; } 55% { opacity: 1; translate: 0 5px; } 80% { translate: 0 -2px; } 100% { opacity: 1; translate: 0 0; } }
+@keyframes book-rise { from { opacity: 0; translate: 0 22px; scale: .96; } to { opacity: 1; translate: 0 0; scale: 1; } }
+
+/* Primary buttons: lift on hover, squish on press, a sheen sweeps across. */
+.fg-landing .btn,
+.fg-cta,
+.fg-auth .g,
+.fg-outline,
+.sp-btn,
+.pp-pay,
+.fg-landing .cta2 .bt,
+.fg-landing .form button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform .3s var(--ease-spring), background-color .2s ease, box-shadow .3s ease, color .2s ease, border-color .2s ease;
+}
+.fg-landing .btn.s::after,
+.fg-cta::after,
+.sp-btn--solid::after,
+.fg-landing .cta2 .bt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .35) 50%, transparent 65%);
+  translate: -110% 0;
+  transition: translate .7s var(--ease-out);
+  pointer-events: none;
+}
+.fg-landing .cta2 .bt::after { background: linear-gradient(105deg, transparent 35%, rgba(225, 58, 0, .14) 50%, transparent 65%); }
+@media (hover: hover) {
+  .fg-landing .btn:hover,
+  .fg-cta:not(:disabled):hover,
+  .fg-auth .g:hover,
+  .fg-outline:hover,
+  .sp-btn:hover,
+  .pp-pay:not(:disabled):hover,
+  .fg-landing .cta2 .bt:hover,
+  .fg-landing .form button:hover { transform: translateY(-3px); }
+  .fg-landing .btn.s:hover::after,
+  .fg-cta:not(:disabled):hover::after,
+  .sp-btn--solid:hover::after,
+  .fg-landing .cta2 .bt:hover::after { translate: 110% 0; }
+  .fg-landing .form button:hover { background: #fff1ea; }
+}
+.fg-landing .btn:active,
+.fg-cta:not(:disabled):active,
+.fg-auth .g:active,
+.fg-outline:active,
+.sp-btn:active,
+.pp-pay:not(:disabled):active,
+.fg-landing .cta2 .bt:active,
+.fg-landing .form button:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
+
+/* Landing hero: copy rises in, corner books drift. */
+.fg-landing .hero h1 { animation: rise .8s var(--ease-out) both; }
+.fg-landing .hero .perks { animation: rise .8s var(--ease-out) .12s both; }
+.fg-landing .hero .btns { animation: rise .8s var(--ease-out) .24s both; }
+.fg-landing .hero .bg { animation: fade-in 1.2s ease .2s both; }
+.fg-landing .hero .bg .rw,
+.fg-decor .fg-rw,
+.sp-hero__decor .fg-rw { animation: float 5.5s ease-in-out infinite alternate; }
+.fg-landing .hero .bg .rw:nth-of-type(2n),
+.fg-decor .fg-rw:nth-of-type(2n),
+.sp-hero__decor .fg-rw:nth-of-type(2n) { animation-duration: 7s; animation-delay: -2.5s; }
+.fg-landing .hero .bg .rw:nth-of-type(3n),
+.fg-decor .fg-rw:nth-of-type(3n),
+.sp-hero__decor .fg-rw:nth-of-type(3n) { animation-duration: 6.2s; animation-delay: -4s; animation-direction: alternate-reverse; }
+
+/* Scroll reveal (see useReveal). */
+.fg-landing [data-reveal] {
+  transition:
+    opacity .8s var(--ease-out) calc(var(--d, 0) * 90ms),
+    translate .8s var(--ease-out) calc(var(--d, 0) * 90ms),
+    transform .4s var(--ease-spring),
+    box-shadow .4s ease,
+    background-color .2s ease;
+}
+html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 32px; }
+
+/* Step cards tilt like books being pulled off a shelf. */
+.fg-landing .card .ic { transition: transform .4s var(--ease-spring); }
+@media (hover: hover) {
+  .fg-landing .card:hover { transform: translateY(-10px) rotate(-1.5deg); }
+  .fg-landing .card:nth-child(2):hover { transform: translateY(-10px) rotate(1.5deg); }
+  .fg-landing .card:hover .ic { animation: wiggle .6s ease; }
+}
+
+/* Theme pills: a soft fill sweeps in on hover, the chosen one pops. */
+.fg-landing .pill {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform .3s var(--ease-spring), background-color .3s ease, border-color .3s ease, color .3s ease, box-shadow .3s ease;
+}
+.fg-landing .pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: #fff1ea;
+  scale: 0 1;
+  transform-origin: left;
+  transition: scale .45s var(--ease-out);
+}
+.fg-landing .pill.on { box-shadow: 0 10px 22px rgba(225, 58, 0, .28); animation: press-pop .45s var(--ease-spring); }
+.fg-landing .pill.on::before { display: none; }
+@media (hover: hover) {
+  .fg-landing .pill:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(28, 18, 9, .1); }
+  .fg-landing .pill:not(.on):hover { border-color: #e13a00; color: #e13a00; }
+  .fg-landing .pill:hover::before { scale: 1 1; }
+  .fg-landing .pill.on:hover { box-shadow: 0 12px 26px rgba(225, 58, 0, .34); }
+}
+.fg-landing .pill:active { transform: scale(.96); transition-duration: .08s; }
+
+/* Laptop preview swaps looks with a soft focus pull. */
+.fg-landing .showcase__swap { width: 100%; height: 100%; animation: screen-in .55s var(--ease-out); }
+.fg-landing .showcase { transition: transform .5s var(--ease-out); }
+@media (hover: hover) { .fg-landing .showcase:hover { transform: translateY(-4px); } }
+
+.fg-landing .form input { transition: border-color .2s ease, box-shadow .2s ease; }
+.fg-landing .form input:focus { border-color: #e13a00; box-shadow: 0 0 0 4px rgba(225, 58, 0, .12); }
+.fg-landing .panel .u { transition: color .2s ease; }
+.fg-landing .panel .u:hover { color: #a82b00; }
+
+.fg-landing .wb .bk,
+.fg-landing .wb .tab { transition: transform .5s var(--ease-spring); }
+.fg-landing .hc .sp { transition: width .35s var(--ease-out); }
+@media (hover: hover) {
+  .fg-landing .wb:hover .bk,
+  .fg-landing .wb:hover .tab { transform: translateY(-8px); }
+  .fg-landing .hc:hover { transform: translateY(-8px) rotate(-1deg); box-shadow: 0 18px 40px rgba(26, 13, 5, .18), 0 4px 10px rgba(26, 13, 5, .08); }
+  .fg-landing .hc:hover .sp { width: 22px; }
+  .fg-landing .tc:hover { transform: translateY(-8px) rotate(-1deg); }
+  .fg-landing .tc .lk img { transition: transform .35s var(--ease-spring); }
+  .fg-landing .tc .lk:hover img { transform: translateX(3px) rotate(-8deg); }
+}
+
+.fg-landing .foot a { transition: color .2s ease; }
+.fg-landing .foot a:hover { color: #e13a00; }
+
+/* Setup flow pages. */
+.fg-flow__main > * { animation: rise .6s var(--ease-out) both; }
+.fg-input { transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
+.fg-flow .fg-input:focus-visible { box-shadow: 0 0 0 1px var(--fg-brand), 0 0 0 5px rgba(225, 58, 0, .1); }
+
+.fg-theme-card {
+  animation: book-rise .55s var(--ease-out) both;
+  transition: transform .35s var(--ease-spring), box-shadow .3s ease, border-color .2s ease;
+}
+.fg-theme-card:nth-child(2) { animation-delay: 60ms; }
+.fg-theme-card:nth-child(3) { animation-delay: 120ms; }
+.fg-theme-card:nth-child(4) { animation-delay: 180ms; }
+.fg-theme-card:nth-child(5) { animation-delay: 240ms; }
+.fg-theme-card:nth-child(6) { animation-delay: 300ms; }
+.fg-theme-card[data-selected='true'] { animation: pop .45s var(--ease-spring); }
+.fg-theme-card__thumb > * { transition: scale .6s var(--ease-out); }
+.fg-pick { transition: background-color .2s ease, color .2s ease, border-color .2s ease, scale .25s var(--ease-spring); }
+.fg-pick:active { scale: .95; }
+@media (hover: hover) {
+  .fg-theme-card:hover { transform: translateY(-5px); box-shadow: 0 14px 28px rgba(28, 18, 9, .14); }
+  .fg-theme-card:hover .fg-theme-card__thumb > * { scale: 1.05; }
+}
+
+.fg-method { transition: border-color .2s ease, box-shadow .3s ease, border-left-width .25s var(--ease-out), padding-left .25s var(--ease-out), transform .35s var(--ease-spring); }
+.fg-method__icon { display: inline-block; }
+.fg-method:active { transform: scale(.98); }
+@media (hover: hover) {
+  .fg-method:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(28, 18, 9, .08); }
+  .fg-method:hover .fg-method__icon { animation: wiggle .6s ease; }
+}
+
+.fg-panel { animation: rise .45s var(--ease-out) both; }
+.fg-alert { animation: rise .35s var(--ease-out) both; }
+.fg-alert[data-tone='success'] { animation: pop .5s var(--ease-spring); }
+.fg-results { transform-origin: top; animation: drop-in .22s var(--ease-out); }
+.fg-drop { transition: border-color .2s ease, background-color .2s ease, transform .3s var(--ease-spring); }
+.fg-drop[data-over='true'] { transform: scale(1.01); }
+
+.fg-book { animation: book-rise .45s var(--ease-out) both; transition: transform .3s var(--ease-spring), box-shadow .3s ease, border-color .2s ease, background-color .2s ease; }
+.fg-book:nth-child(2) { animation-delay: 40ms; }
+.fg-book:nth-child(3) { animation-delay: 80ms; }
+.fg-book:nth-child(4) { animation-delay: 120ms; }
+.fg-book:nth-child(5) { animation-delay: 160ms; }
+.fg-book:nth-child(n + 6) { animation-delay: 200ms; }
+.fg-book__cover { transition: transform .35s var(--ease-spring); }
+@media (hover: hover) {
+  .fg-book:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(28, 18, 9, .08); }
+  .fg-book:hover .fg-book__cover { transform: rotate(-4deg) scale(1.04); }
+}
+
+/* Modals fade the page and lift the card in (book details has its own opening). */
+.modal-backdrop { animation: fade-in .2s ease both; }
+.modal-dialog:not(.reading-dialog) { animation: drop-in .35s var(--ease-out) both; }
+
+/* Shelf page. */
+.sp-hero > :not(.sp-hero__decor) { animation: rise .7s var(--ease-out) both; }
+.sp-hero > .sp-title { animation-delay: .08s; }
+.sp-hero > .sp-meta { animation-delay: .14s; }
+.sp-hero > .sp-link { animation-delay: .2s; }
+.sp-hero > .sp-shares { animation-delay: .28s; }
+.sp-share { transition: transform .3s var(--ease-spring), background-color .2s ease, box-shadow .3s ease; }
+.sp-share svg { transition: transform .4s var(--ease-spring); }
+.sp-link button:active, .sp-share:active { scale: .95; }
+@media (hover: hover) {
+  .sp-share:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(28, 18, 9, .1); }
+  .sp-share:hover svg { transform: rotate(-12deg) scale(1.15); }
+}
+.sp-status:not(:empty) { animation: rise .3s var(--ease-out); }
+
+/* Checkout. */
+.pp-summary__inner, .pp-form__inner { animation: rise .6s var(--ease-out) both; }
+.pp-form__inner { animation-delay: .08s; }
+.pp input, .pp select, .pp-phone { transition: border-color .2s ease, box-shadow .2s ease; }
+.pp input:focus, .pp select:focus, .pp-phone:focus-within { box-shadow: 0 0 0 3px rgba(225, 58, 0, .18); }
+.pp .pp-phone input:focus { box-shadow: none; }
+.pp-error { animation: rise .3s var(--ease-out); }
+
+/* Books arriving on every shelf look. */
+.sv-tile,
+.sv-dbook,
+.sv-mac__item { animation: book-rise .6s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.sv-spine { animation: book-drop .7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+
+.sv-tile { transition: transform .35s var(--ease-spring), box-shadow .35s ease; }
+.sv-tile__cover.book-cover { transition: transform .45s var(--ease-spring); }
+.sv-dbook { transition: transform .35s var(--ease-spring); transform-origin: center bottom; }
+.sv-spine { transform-origin: center bottom; transition: width .55s var(--ease-out), transform .55s var(--ease-out), filter .3s ease; }
+.sv-spine__face { transition: transform .55s var(--ease-out), opacity .25s ease .1s; }
+.sv-spine__jacket { transition: transform .55s var(--ease-out), opacity .2s ease; }
+/* Hover or focus turns the spine away to show the cover, the way you pull a book out to look at it. */
+.sv-spine:focus-visible { z-index: 2; width: var(--cover-w); transform: translateY(-10px) rotate(-2deg); }
+.sv-spine:focus-visible .sv-spine__face { transform: rotateY(80deg); opacity: 0; transition-delay: 0s; }
+.sv-spine:focus-visible .sv-spine__jacket { transform: rotateY(-8deg); opacity: 1; transition-delay: .04s; }
+.sv-mac__book { transition: transform .3s var(--ease-spring); transform-origin: center bottom; }
+.sv-mac__caption { transition: color .2s ease; }
+.sv-tile:active, .sv-dbook:active, .sv-spine:active, .sv-mac__item:active { scale: .97; }
+
+@media (hover: hover) {
+  .sv-tile:hover { transform: translateY(-6px); box-shadow: 0 16px 30px rgba(0, 0, 0, .12); }
+  .sv-tile:hover .sv-tile__cover.book-cover { transform: rotate(-2.5deg) scale(1.04); }
+  .sv-dbook:hover { transform: translateY(-10px) rotate(-3deg); }
+  /* Grid and digital-shelf covers swing open a little to show the first page. */
+  .sv-tile:hover .book-cover__face,
+  .sv-dbook:hover .book-cover__face { transform: rotateY(-32deg); }
+  .sv-tile:hover .book-cover__sheen,
+  .sv-dbook:hover .book-cover__sheen { opacity: 0 !important; }
+  .sv-spine:hover { z-index: 2; width: var(--cover-w); transform: translateY(-10px) rotate(-2deg); }
+  .sv-spine:hover .sv-spine__face { transform: rotateY(80deg); opacity: 0; transition-delay: 0s; }
+  .sv-spine:hover .sv-spine__jacket { transform: rotateY(-8deg); opacity: 1; transition-delay: .04s; }
+  .sv-spine:has(+ .sv-spine:hover) { transform: rotate(-3deg); }
+  .sv-spine:hover + .sv-spine { transform: rotate(3deg); }
+  /* MacOS: dock-style magnify with neighbours following. */
+  .sv-mac__item:hover .sv-mac__book { transform: translateY(-10px) scale(1.14); }
+  .sv-mac__item:hover + .sv-mac__item .sv-mac__book,
+  .sv-mac__item:has(+ .sv-mac__item:hover) .sv-mac__book { transform: translateY(-4px) scale(1.05); }
+  .sv-mac__item:hover .sv-mac__caption { color: #1c1209; }
+}

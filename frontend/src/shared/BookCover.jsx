@@ -114,6 +114,7 @@ export default function BookCover({
     >
       <div className="book-cover__object">
         <div className="book-cover__pages" aria-hidden="true" />
+        <div className="book-cover__inside" aria-hidden="true" />
         <div className="book-cover__face">
           <div className="book-cover__body">
             {imageUrl ? (

@@ -1,0 +1,96 @@
+/* Dark checkout from the Figma "Purchase Page" frame (1440 x 744). */
+.pp {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: #121212;
+  color: #ededed;
+  font: 400 13px/18px 'Inter', sans-serif;
+}
+.pp button, .pp input, .pp select { font: inherit; color: inherit; }
+.pp a { color: inherit; }
+
+.pp-summary { background: #1b1b1b; display: flex; justify-content: flex-end; padding: 79px 70px 48px 32px; }
+.pp-summary__inner { width: 100%; max-width: 500px; display: flex; flex-direction: column; }
+.pp-merchant { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; }
+.pp-merchant__logo { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #a3166f; font-size: 12px; font-weight: 700; color: #fff; }
+.pp-pill { margin-left: auto; padding: 5px 10px; border: 1px solid #333; border-radius: 6px; font-size: 12px; font-weight: 500; color: #d4d4d4; }
+.pp-product { margin: 36px 0 0; font-size: 14px; color: #a3a3a3; }
+.pp-price { margin: 8px 0 0; font: 700 24px/32px 'Inter', sans-serif; color: #fafafa; }
+.pp-discount { margin-top: 28px; padding: 16px 0; border-top: 1px solid #2c2c2c; border-bottom: 1px solid #2c2c2c; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #d4d4d4; }
+.pp-discount__form { display: flex; flex: 1; gap: 8px; }
+.pp-discount__form input { flex: 1; min-width: 0; height: 34px; padding: 0 12px; border: 1px solid #333; border-radius: 6px; background: #141414; outline: none; }
+.pp-discount__form input:focus { border-color: #e13a00; }
+.pp-discount__msg { margin: 8px 0 0; color: #fca5a5; font-size: 12px; }
+.pp-ghost { height: 34px; padding: 0 12px; border: 1px solid #333; border-radius: 6px; background: #141414; font-size: 12px !important; font-weight: 600 !important; }
+.pp-ghost:hover { background: #222; }
+.pp-totals { margin: 24px 0 0; display: flex; flex-direction: column; gap: 22px; }
+.pp-totals div { display: flex; justify-content: space-between; }
+.pp-totals dt { color: #a3a3a3; }
+.pp-totals dd { margin: 0; color: #d4d4d4; }
+.pp-totals__total dt { color: #ededed; font-weight: 500; }
+.pp-totals__total dd { font: 700 16px/20px 'Inter', sans-serif; color: #fafafa; }
+.pp-back { margin-top: auto; align-self: flex-start; padding: 32px 0 0; border: 0; background: none; color: #a3a3a3; font-size: 13px; }
+.pp-back:hover { color: #fff; text-decoration: underline; }
+
+.pp-form { padding: 76px 32px 48px 70px; border-left: 1px solid #222; }
+.pp-form__inner { width: 100%; max-width: 500px; display: flex; flex-direction: column; }
+.pp-form h1 { margin: 0 0 24px; font: 600 15px/20px 'Inter', sans-serif; color: #fafafa; }
+.pp-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; min-width: 0; }
+.pp-field > span:first-child { font-size: 12px; font-weight: 500; color: #d4d4d4; }
+.pp b { color: #ef4444; font-weight: 500; }
+.pp input, .pp select {
+  height: 36px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #171717;
+  outline: none;
+}
+.pp input::placeholder { color: #6b6b6b; }
+.pp input:focus, .pp select:focus { border-color: #e13a00; }
+.pp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pp-phone { display: flex; align-items: center; height: 36px; border: 1px solid #2a2a2a; border-radius: 6px; background: #171717; }
+.pp-phone:focus-within { border-color: #e13a00; }
+.pp-phone__code { display: flex; align-items: center; gap: 4px; padding: 0 10px; height: 100%; border-right: 1px solid #2a2a2a; }
+.pp-phone__code small { font-size: 9px; color: #a3a3a3; }
+.pp-phone__prefix { padding-left: 10px; color: #d4d4d4; }
+.pp .pp-phone input { height: 34px; border: 0; background: none; padding-left: 6px; }
+
+.pp-billing { margin: 4px 0 0; padding: 0; border: 0; min-width: 0; }
+.pp-billing legend { margin-bottom: 12px; padding: 0; font-weight: 600; font-size: 14px; color: #fafafa; }
+.pp-stack { display: flex; flex-direction: column; }
+.pp-stack > select { border-radius: 6px 6px 0 0; font-weight: 600; color: #fafafa; }
+.pp-stack > input { border-top: 0; border-radius: 0 0 6px 6px; }
+.pp-stack:has(.pp-stack__row) > input { border-radius: 0; }
+.pp-stack__row { display: grid; grid-template-columns: repeat(3, 1fr); }
+.pp-stack__row input { border-top: 0; border-radius: 0; }
+.pp-stack__row input + input { border-left: 0; }
+.pp-stack__row input:first-child { border-bottom-left-radius: 6px; }
+.pp-stack__row input:last-child { border-bottom-right-radius: 6px; }
+.pp-link { margin-top: 12px; padding: 0; border: 0; background: none; font-size: 11px !important; color: #d4d4d4 !important; text-decoration: underline dotted; text-underline-offset: 3px; }
+.pp-check { margin: 18px 0 0; display: flex; align-items: center; gap: 10px; color: #d4d4d4; }
+.pp .pp-check input { width: 14px; height: 14px; padding: 0; accent-color: #e13a00; }
+.pp-check + .pp-field { margin-top: 16px; }
+.pp-error { margin: 16px 0 0; padding: 10px 12px; border: 1px solid #7f1d1d; border-radius: 6px; background: #2a1212; color: #fecaca; }
+.pp-pay { margin-top: 22px; height: 38px; border: 0; border-radius: 6px; background: #2b2b2b; font-weight: 600 !important; color: #fff !important; }
+.pp-pay:hover { background: #e13a00; }
+.pp-pay:disabled { opacity: .7; }
+.pp-legal { margin: 26px 0 0; font-size: 12px; line-height: 18px; color: #bdbdbd; text-align: center; }
+.pp-legal code { font-size: 11px; color: #fafafa; }
+.pp-brand { margin: 14px 0 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: #a3a3a3; }
+.pp-brand span { font-weight: 700; color: #fafafa; }
+
+@media (max-width: 900px) {
+  .pp { grid-template-columns: minmax(0, 1fr); }
+  .pp-summary { justify-content: center; padding: 40px 20px 32px; }
+  .pp-form { padding: 32px 20px 48px; border-left: 0; border-top: 1px solid #222; display: flex; justify-content: center; }
+  .pp-back { padding-top: 24px; }
+}
+
+@media (max-width: 520px) {
+  .pp-row { grid-template-columns: 1fr; gap: 0; }
+  .pp-stack__row { grid-template-columns: 1fr; }
+  .pp-stack__row input + input { border-left: 1px solid #2a2a2a; }
+}

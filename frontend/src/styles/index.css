@@ -1,8 +1,9 @@
 @import 'tailwindcss';
 @import '@fontsource/syne/700.css';
 @import '@fontsource/lora/400.css';
+@import '@fontsource/lora/400-italic.css';
 @import '@fontsource/lora/700-italic.css';
-@import './bookish-motion.css';
+@import './motion.css';
 
 @theme {
   --font-sans: 'Avenir Next', Arial, sans-serif;
@@ -18,6 +19,10 @@
 body {
   margin: 0;
   font-family: 'Avenir Next', Arial, sans-serif;
+}
+
+[tabindex='-1']:focus {
+  outline: none;
 }
 
 button:not(:disabled),

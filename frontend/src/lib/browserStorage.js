@@ -16,7 +16,7 @@ function cleanBook(book) {
     author: book.author.trim(),
     cover: typeof book.cover === 'string' && /^blob:/i.test(book.cover) ? null : book.cover,
   };
-  for (const key of ['color', 'spineBg']) {
+  for (const key of ['color', 'spineBg', 'source']) {
     if (typeof book[key] === 'string') clean[key] = book[key];
   }
   if (Number.isInteger(book.rating) && book.rating >= 0 && book.rating <= 5) clean.rating = book.rating;
@@ -26,7 +26,10 @@ function cleanBook(book) {
 function cleanDraft(draft) {
   const themeId = typeof draft?.themeId === 'string'
     ? draft.themeId
-    : typeof draft?.theme?.id === 'string' ? draft.theme.id : 'simple-grid';
+    : typeof draft?.theme?.id === 'string' ? draft.theme.id : 'light-grid';
+  const purchasedThemeIds = Array.isArray(draft?.purchasedThemeIds)
+    ? [...new Set(draft.purchasedThemeIds.filter(id => typeof id === 'string' && id.trim()))]
+    : [];
   const books = Array.isArray(draft?.books) ? draft.books.map(cleanBook).filter(Boolean) : [];
   const uniqueBooks = [];
   const seenIds = new Set();
@@ -38,6 +41,7 @@ function cleanDraft(draft) {
   return {
     books: uniqueBooks,
     themeId,
+    purchasedThemeIds,
   };
 }
 
@@ -79,7 +83,9 @@ function cleanProfile(profile) {
   const email = typeof profile.email === 'string' ? profile.email.trim() : '';
   const name = typeof profile.name === 'string' ? profile.name.trim() : '';
   if (!email) return null;
-  return { email, name: name || email.split('@')[0] || 'Reader' };
+  const clean = { email, name: name || email.split('@')[0] || 'Reader' };
+  if (Number.isInteger(profile.since) && profile.since >= 1900 && profile.since <= 2100) clean.since = profile.since;
+  return clean;
 }
 
 export function readProfile() {

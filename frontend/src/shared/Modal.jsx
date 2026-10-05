@@ -58,8 +58,8 @@ export default function Modal({ onClose, labelledBy, children, className = '' })
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} onKeyDown={handleKeyDown} className={`max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain ${className}`}>
+    <div className="modal-backdrop fixed inset-0 z-50 grid place-items-center bg-black/45 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose?.(); }}>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={labelledBy} tabIndex={-1} onKeyDown={handleKeyDown} className={`modal-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain ${className}`}>
         {children}
       </section>
     </div>

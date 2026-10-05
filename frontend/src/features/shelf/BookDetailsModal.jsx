@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import BookCover from '../../shared/BookCover.jsx';
 import Modal from '../../shared/Modal.jsx';
 import '../../styles/reading-book.css';
@@ -63,6 +63,114 @@ function ReadingBook({ book, onClose }) {
   );
 }
 
-export default function BookDetailsModal({ book, onClose }) {
-  return book ? <ReadingBook key={book.id ?? book.title} book={book} onClose={onClose} /> : null;
+const BOOK_W = 220;
+const BOOK_H = 330;
+const LIFT_EASE = 'cubic-bezier(.2, .8, .2, 1)';
+const OPEN_EASE = 'cubic-bezier(.45, .05, .2, 1)';
+
+// Lifts the chosen book off the shelf, turns it to face the reader and swings the
+// cover open; the reading card takes over once the cover is open. A click skips ahead.
+function BookOpening({ book, origin, onOpened, onDone, onCancel }) {
+  const overlayRef = useRef(null);
+  const bookRef = useRef(null);
+  const coverRef = useRef(null);
+  const handlers = useRef({ onOpened, onDone, onCancel });
+  const { rect, spine, cloth, ink } = origin;
+  const thickness = spine ? Math.min(44, Math.max(18, rect.width * BOOK_H / rect.height)) : 26;
+
+  useEffect(() => {
+    handlers.current = { onOpened, onDone, onCancel };
+  });
+
+  useEffect(() => {
+    const onKeyDown = event => { if (event.key === 'Escape') handlers.current.onCancel(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useLayoutEffect(() => {
+    const scale = spine ? rect.height / BOOK_H : rect.width / BOOK_W;
+    const dx = rect.left + rect.width / 2 - window.innerWidth / 2;
+    const dy = rect.top + rect.height / 2 - window.innerHeight / 2;
+    const turn = spine ? 90 : 0;
+    const front = `translateZ(${thickness / 2}px)`;
+    const running = [];
+    const play = (element, keyframes, options) => {
+      const animation = element.animate(keyframes, { fill: 'both', ...options });
+      running.push(animation);
+      return animation.finished;
+    };
+
+    play(bookRef.current, [
+      { transform: `translate(${dx}px, ${dy}px) scale(${scale}) rotateY(${turn}deg)` },
+      { transform: `translate(${dx * .4}px, ${dy * .4 - 70}px) scale(${(scale + 1) / 2}) rotateX(12deg) rotateY(${turn * .35}deg)`, offset: .55 },
+      { transform: 'translate(0, 0) scale(1) rotateX(0deg) rotateY(0deg)' },
+    ], { duration: 760, easing: LIFT_EASE })
+      .then(() => Promise.all([
+        play(coverRef.current, [{ transform: `${front} rotateY(0deg)` }, { transform: `${front} rotateY(-168deg)` }], { duration: 820, easing: OPEN_EASE }),
+        play(bookRef.current, [{ translate: '0 0' }, { translate: `${BOOK_W / 2}px 0` }], { duration: 820, easing: OPEN_EASE }),
+      ]))
+      .then(() => {
+        handlers.current.onOpened();
+        return play(overlayRef.current, [{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: 'ease' });
+      })
+      .then(() => handlers.current.onDone())
+      .catch(() => {});
+    return () => running.forEach(animation => animation.cancel());
+  }, [rect, spine, thickness]);
+
+  function skip() {
+    handlers.current.onOpened();
+    handlers.current.onDone();
+  }
+
+  return (
+    <div ref={overlayRef} className="bo" role="presentation" onClick={skip}>
+      <p className="sr-only" role="status">Opening {book.title}</p>
+      <div ref={bookRef} className="bo-book" aria-hidden="true" style={{ '--t': `${thickness}px`, '--cloth': cloth || book.spineBg || book.color || '#6f4935', '--ink': ink || book.spineText || '#fff8e9' }}>
+        <div className="bo-back" />
+        <div className="bo-edge" />
+        <div className="bo-spine"><span>{book.title}</span></div>
+        <div className="bo-page">
+          <span className="bo-page__eyebrow">EX LIBRIS</span>
+          <span className="bo-page__flourish">❧</span>
+          <strong>{book.title}</strong>
+          <em>by {book.author || 'Unknown author'}</em>
+        </div>
+        <div ref={coverRef} className="bo-cover">
+          <div className="bo-cover__front"><BookCover book={book} interactive={false} loading="eager" /></div>
+          <div className="bo-cover__inside"><p className="bo-plate"><span>This book belongs to</span><b>Bookshelf.cv</b></p></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function BookDetails({ book, origin, onClose }) {
+  const animate = Boolean(origin?.rect) && !prefersReducedMotion();
+  const [opening, setOpening] = useState(animate);
+  const [cardShown, setCardShown] = useState(!animate);
+
+  return (
+    <>
+      {cardShown && <ReadingBook book={book} onClose={onClose} />}
+      {opening && (
+        <BookOpening
+          book={book}
+          origin={origin}
+          onOpened={() => setCardShown(true)}
+          onDone={() => setOpening(false)}
+          onCancel={onClose}
+        />
+      )}
+    </>
+  );
+}
+
+export default function BookDetailsModal({ book, origin, onClose }) {
+  return book ? <BookDetails key={book.id ?? book.title} book={book} origin={origin} onClose={onClose} /> : null;
 }

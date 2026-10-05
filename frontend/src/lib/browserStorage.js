@@ -38,11 +38,10 @@ function cleanDraft(draft) {
     seenIds.add(book.id);
     uniqueBooks.push(book);
   }
-  return {
-    books: uniqueBooks,
-    themeId,
-    purchasedThemeIds,
-  };
+  const clean = { books: uniqueBooks, themeId, purchasedThemeIds };
+  // Email of the reader this shelf belongs to, so the next person to sign in on this browser starts fresh.
+  if (typeof draft?.owner === 'string' && draft.owner.trim()) clean.owner = draft.owner.trim().toLowerCase();
+  return clean;
 }
 
 function parseDraft(raw) {

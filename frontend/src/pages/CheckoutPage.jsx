@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { getTheme } from '../data/themes.js';
 import Checkout from '../features/checkout/Checkout.jsx';
+import usePageTitle from '../app/usePageTitle.js';
 
 // /purchase?theme=… — Razorpay checkout for a paid look.
 export default function CheckoutPage({ app }) {
   const theme = getTheme(app.searchParam('theme'));
   const alreadyOwned = app.isUnlocked(theme);
+  usePageTitle(`Checkout · ${theme.name} theme`);
   const { navigate } = app;
 
   // Free or already-bought looks have nothing to pay for.

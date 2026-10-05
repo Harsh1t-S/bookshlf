@@ -1,3 +1,4 @@
+import usePageTitle from '../app/usePageTitle.js';
 import useReveal from '../hooks/useReveal.js';
 import CtaSection from '../sections/landing/CtaSection.jsx';
 import HeroSection from '../sections/landing/HeroSection.jsx';
@@ -16,6 +17,7 @@ function showDemo() {
 // / — marketing page, top to bottom as in the Figma "Website" frame.
 export default function LandingPage({ app }) {
   useReveal();
+  usePageTitle();
   return (
     <div className="fg-landing">
       <LandingNav />

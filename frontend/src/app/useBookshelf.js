@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { getTheme, isThemeUnlocked } from '../data/themes.js';
+import { getTheme, isThemeUnlocked, themes } from '../data/themes.js';
 import { clearProfile, readDraft, readProfile, saveDraft, saveProfile } from '../lib/browserStorage.js';
 import useBrowserRouter from './useBrowserRouter.js';
 import useRouteScroll from './useRouteScroll.js';
+
+const SIGNED_IN_ONLY = ['/themes', '/books', '/purchase', '/shelf'];
 
 function normalizePath(pathname) {
   return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
@@ -25,12 +27,19 @@ export default function useBookshelf() {
 
   useRouteScroll(pathname);
 
+  // The setup steps and the owner's shelf need a signed-in reader.
+  const needsSignIn = !user && SIGNED_IN_ONLY.includes(pathname);
+  useEffect(() => {
+    if (needsSignIn) navigate('/signup', { replace: true });
+  }, [needsSignIn, navigate]);
+
   function updateDraft(changes) {
     setDraft(current => ({ ...current, ...changes }));
   }
 
   return {
-    pathname,
+    // Signed-out visitors see the sign-up page right away while the URL catches up.
+    pathname: needsSignIn ? '/signup' : pathname,
     navigate,
     user,
     books,
@@ -50,7 +59,11 @@ export default function useBookshelf() {
       const profile = saveProfile({ email, name, since: readProfile()?.since ?? new Date().getFullYear() });
       if (!profile) return;
       setUser(profile);
-      navigate(books.length ? '/shelf' : '/themes');
+      // A different reader on this browser gets an empty shelf, not the previous reader's books and purchases.
+      const owner = profile.email.toLowerCase();
+      const keepsShelf = !draft.owner || draft.owner === owner;
+      setDraft(keepsShelf ? { ...draft, owner } : { books: [], themeId: themes[0].id, purchasedThemeIds: [], owner });
+      navigate(keepsShelf && books.length ? '/shelf' : '/themes');
     },
 
     signOut() {

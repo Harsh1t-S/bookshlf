@@ -18,8 +18,8 @@ export default function StoriesSection({ onStart }) {
           ))}
         </div>
         <div className="panel" id="contact" data-reveal>
-          <div className="t">If you get a question., Do share it. You will get an answer within 24 hours. No AI replies.</div>
-          <CaptureForm label="Your question" placeholder="Share your questions." />
+          <div className="t">If you have a question, do share it. You will get an answer within 24 hours. No AI replies.</div>
+          <CaptureForm label="Your question" placeholder="Share your questions." emptyMessage="Type your question first." />
         </div>
       </div>
       <Reviews />

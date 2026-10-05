@@ -2,9 +2,11 @@ import FlowShell from '../components/FlowShell.jsx';
 import catalog from '../data/books.js';
 import AuthNavLink from '../features/auth/AuthNavLink.jsx';
 import ThemePicker from '../features/themes/ThemePicker.jsx';
+import usePageTitle from '../app/usePageTitle.js';
 
 // /themes — step 1 of setup: choose a look (paid looks go through checkout).
 export default function ThemesPage({ app }) {
+  usePageTitle('Choose your look');
   return (
     <FlowShell navRight={<AuthNavLink app={app} />}>
       <ThemePicker

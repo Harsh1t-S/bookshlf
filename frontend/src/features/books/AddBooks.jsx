@@ -46,11 +46,13 @@ function Alert({ tone, children }) {
 }
 
 export default function AddBooks({ books = [], catalog = [], onBooksChange, onContinue }) {
-  const [mode, setMode] = useState('goodreads');
+  // Coming back to this page (Back, refresh, "Add book") shows what is already on the shelf.
+  const hasSource = source => books.some(book => book.source === source);
+  const [mode, setMode] = useState(() => (hasSource('goodreads') ? 'goodreads' : hasSource('photo') ? 'photo' : books.length ? 'library' : 'goodreads'));
   const [goodreadsId, setGoodreadsId] = useState('');
   const [goodreadsError, setGoodreadsError] = useState('');
-  const [goodreadsPhase, setGoodreadsPhase] = useState('idle');
-  const [photoPhase, setPhotoPhase] = useState('idle');
+  const [goodreadsPhase, setGoodreadsPhase] = useState(() => (hasSource('goodreads') ? 'done' : 'idle'));
+  const [photoPhase, setPhotoPhase] = useState(() => (hasSource('photo') ? 'done' : 'idle'));
   const [photoError, setPhotoError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const [query, setQuery] = useState('');

@@ -1,6 +1,12 @@
 import { themes } from '../../data/themes.js';
 import { art, readerRows } from './content.jsx';
 
+// The rows drift, so a card reached with Tab may be off screen; bring it into view once the row has stopped.
+function showFocusedCard(event) {
+  const link = event.currentTarget;
+  if (link.matches(':focus-visible')) requestAnimationFrame(() => link.closest('.tc').scrollIntoView({ block: 'nearest', inline: 'center' }));
+}
+
 function Testimonial({ right, left, theme, hidden }) {
   return (
     <div className="tc" aria-hidden={hidden || undefined}>
@@ -12,7 +18,7 @@ function Testimonial({ right, left, theme, hidden }) {
           <div className="av2"><img src={art('reader-avatar.jpg')} alt="" /></div>
           <div className="nm"><b>Aman Gupta</b><span>Simple Themes</span></div>
         </div>
-        <a className="lk" href={`/demo?theme=${theme}`} tabIndex={hidden ? -1 : undefined}><img src={art('4606f.svg')} alt="" />View Bookshelf</a>
+        <a className="lk" href={`/demo?theme=${theme}`} tabIndex={hidden ? -1 : undefined} onFocus={showFocusedCard}><img src={art('4606f.svg')} alt="" />View Bookshelf</a>
       </div>
     </div>
   );

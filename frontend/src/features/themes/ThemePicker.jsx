@@ -64,7 +64,7 @@ export default function ThemePicker({ selectedTheme, books, purchasedThemeIds = 
               aria-pressed={previewTheme.id === selectedId && isThemeUnlocked(previewTheme, purchasedThemeIds)}
               onClick={() => { choose(previewTheme); setPreviewId(null); }}
             >
-              {actionLabel(previewTheme)}{previewTheme.paid && !isThemeUnlocked(previewTheme, purchasedThemeIds) ? ` · ₹${previewTheme.inr}` : ''}
+              {actionLabel(previewTheme)}{previewTheme.paid && !isThemeUnlocked(previewTheme, purchasedThemeIds) ? ` · $${previewTheme.usd}` : ''}
             </button>
           </footer>
         </Modal>

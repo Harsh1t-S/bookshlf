@@ -1,4 +1,6 @@
 /* Shared motion: entrances, hover and press feedback across the site.
+   Entrances fill "backwards" only: a lingering translate/scale would make the element
+   the containing block for position:fixed pop-ups inside it and push them off centre.
    Reveal and arrival effects use the individual `translate`/`scale` properties so
    they never fight the `transform` used by hover states or layout. Reduced motion
    is handled globally in index.css. */
@@ -71,10 +73,10 @@
 .fg-landing .form button:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
 
 /* Landing hero: copy rises in, corner books drift. */
-.fg-landing .hero h1 { animation: rise .8s var(--ease-out) both; }
-.fg-landing .hero .perks { animation: rise .8s var(--ease-out) .12s both; }
-.fg-landing .hero .btns { animation: rise .8s var(--ease-out) .24s both; }
-.fg-landing .hero .bg { animation: fade-in 1.2s ease .2s both; }
+.fg-landing .hero h1 { animation: rise .8s var(--ease-out) backwards; }
+.fg-landing .hero .perks { animation: rise .8s var(--ease-out) .12s backwards; }
+.fg-landing .hero .btns { animation: rise .8s var(--ease-out) .24s backwards; }
+.fg-landing .hero .bg { animation: fade-in 1.2s ease .2s backwards; }
 .fg-landing .hero .bg .rw,
 .fg-decor .fg-rw,
 .sp-hero__decor .fg-rw { animation: float 5.5s ease-in-out infinite alternate; }
@@ -159,12 +161,12 @@ html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 
 .fg-landing .foot a:hover { color: #e13a00; }
 
 /* Setup flow pages. */
-.fg-flow__main > * { animation: rise .6s var(--ease-out) both; }
+.fg-flow__main > * { animation: rise .6s var(--ease-out) backwards; }
 .fg-input { transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease; }
 .fg-flow .fg-input:focus-visible { box-shadow: 0 0 0 1px var(--fg-brand), 0 0 0 5px rgba(225, 58, 0, .1); }
 
 .fg-theme-card {
-  animation: book-rise .55s var(--ease-out) both;
+  animation: book-rise .55s var(--ease-out) backwards;
   transition: transform .35s var(--ease-spring), box-shadow .3s ease, border-color .2s ease;
 }
 .fg-theme-card:nth-child(2) { animation-delay: 60ms; }
@@ -189,14 +191,14 @@ html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 
   .fg-method:hover .fg-method__icon { animation: wiggle .6s ease; }
 }
 
-.fg-panel { animation: rise .45s var(--ease-out) both; }
-.fg-alert { animation: rise .35s var(--ease-out) both; }
+.fg-panel { animation: rise .45s var(--ease-out) backwards; }
+.fg-alert { animation: rise .35s var(--ease-out) backwards; }
 .fg-alert[data-tone='success'] { animation: pop .5s var(--ease-spring); }
 .fg-results { transform-origin: top; animation: drop-in .22s var(--ease-out); }
 .fg-drop { transition: border-color .2s ease, background-color .2s ease, transform .3s var(--ease-spring); }
 .fg-drop[data-over='true'] { transform: scale(1.01); }
 
-.fg-book { animation: book-rise .45s var(--ease-out) both; transition: transform .3s var(--ease-spring), box-shadow .3s ease, border-color .2s ease, background-color .2s ease; }
+.fg-book { animation: book-rise .45s var(--ease-out) backwards; transition: transform .3s var(--ease-spring), box-shadow .3s ease, border-color .2s ease, background-color .2s ease; }
 .fg-book:nth-child(2) { animation-delay: 40ms; }
 .fg-book:nth-child(3) { animation-delay: 80ms; }
 .fg-book:nth-child(4) { animation-delay: 120ms; }
@@ -209,11 +211,11 @@ html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 
 }
 
 /* Modals fade the page and lift the card in (book details has its own opening). */
-.modal-backdrop { animation: fade-in .2s ease both; }
-.modal-dialog:not(.reading-dialog) { animation: drop-in .35s var(--ease-out) both; }
+.modal-backdrop { animation: fade-in .2s ease backwards; }
+.modal-dialog:not(.reading-dialog) { animation: drop-in .35s var(--ease-out) backwards; }
 
 /* Shelf page. */
-.sp-hero > :not(.sp-hero__decor) { animation: rise .7s var(--ease-out) both; }
+.sp-hero > :not(.sp-hero__decor) { animation: rise .7s var(--ease-out) backwards; }
 .sp-hero > .sp-title { animation-delay: .08s; }
 .sp-hero > .sp-meta { animation-delay: .14s; }
 .sp-hero > .sp-link { animation-delay: .2s; }
@@ -228,7 +230,7 @@ html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 
 .sp-status:not(:empty) { animation: rise .3s var(--ease-out); }
 
 /* Checkout. */
-.pp-summary__inner, .pp-form__inner { animation: rise .6s var(--ease-out) both; }
+.pp-summary__inner, .pp-form__inner { animation: rise .6s var(--ease-out) backwards; }
 .pp-form__inner { animation-delay: .08s; }
 .pp input, .pp select, .pp-phone { transition: border-color .2s ease, box-shadow .2s ease; }
 .pp input:focus, .pp select:focus, .pp-phone:focus-within { box-shadow: 0 0 0 3px rgba(225, 58, 0, .18); }
@@ -238,8 +240,8 @@ html.reveal-on .fg-landing [data-reveal]:not(.is-in) { opacity: 0; translate: 0 
 /* Books arriving on every shelf look. */
 .sv-tile,
 .sv-dbook,
-.sv-mac__item { animation: book-rise .6s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
-.sv-spine { animation: book-drop .7s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.sv-mac__item { animation: book-rise .6s var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+.sv-spine { animation: book-drop .7s var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
 
 .sv-tile { transition: transform .35s var(--ease-spring), box-shadow .35s ease; }
 .sv-tile__cover.book-cover { transition: transform .45s var(--ease-spring); }

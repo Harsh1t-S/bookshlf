@@ -141,11 +141,12 @@
 .fg-themes .fg-cta { margin-top: 40px; }
 .fg-note { margin: 16px 0 0; text-align: center; font: 500 14px/20px 'Inter', sans-serif; color: rgba(28, 18, 9, .65); }
 
-.fg-preview-dialog { width: min(980px, 100%); border-radius: 16px; background: #fff; box-shadow: 0 30px 80px rgba(0, 0, 0, .35); overflow: hidden; }
+.fg-preview-dialog { width: min(980px, 100%); border-radius: 16px; background: #fff; box-shadow: 0 30px 80px rgba(0, 0, 0, .35); overflow: hidden auto; }
 .fg-preview-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; }
 .fg-preview-dialog h2 { margin: 0; font: 700 20px/28px 'Syne', sans-serif; color: #1c1209; }
 .fg-preview-dialog header button { border: 0; background: none; font-size: 24px; line-height: 1; color: #6f655b; padding: 4px 8px; border-radius: 999px; }
-.fg-preview-dialog .fg-preview-dialog__frame { height: min(560px, 62vh); overflow: hidden; }
+/* Follows the dialog's width on phones so the buttons below stay on screen. */
+.fg-preview-dialog .fg-preview-dialog__frame { aspect-ratio: 16 / 10; max-height: min(560px, 62vh); width: 100%; overflow: hidden; }
 .fg-preview-dialog footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 20px; }
 .fg-preview-dialog footer .fg-pick { width: auto; height: 40px; padding: 0 24px; border-radius: 12px; }
 

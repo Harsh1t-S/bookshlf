@@ -1,7 +1,9 @@
 import FlowShell from '../components/FlowShell.jsx';
 import AuthNavLink from '../features/auth/AuthNavLink.jsx';
+import usePageTitle from '../app/usePageTitle.js';
 
 export default function NotFoundPage({ app }) {
+  usePageTitle('Page not found');
   return (
     <FlowShell navRight={<AuthNavLink app={app} />}>
       <div className="fg-themes fg-head">

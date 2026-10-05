@@ -60,7 +60,7 @@ export default function ThemesSection() {
           <div className="row"><span className="t">New themes are in progress....</span><a className="u" href="/themes">Explore Future Themes here</a></div>
           <div><p>Share your email address or any social links which we can use to tell you when the new themes are available.</p><p>Don’t worry, we won’t sell or spam you. Pinky Promise!!</p></div>
         </div>
-        <CaptureForm label="Email or social handle" placeholder="Share email or any social handle" />
+        <CaptureForm label="Email or social handle" placeholder="Share email or any social handle" emptyMessage="Add your email or a social handle first." />
       </div>
     </section>
   );

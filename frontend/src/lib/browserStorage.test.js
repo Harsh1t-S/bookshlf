@@ -83,3 +83,11 @@ test('purchased themes survive storage and drop invalid or repeated ids', () => 
 
   assert.deepEqual(readDraft().purchasedThemeIds, ['macos', 'spine-shelf']);
 });
+
+test('the shelf owner is kept, trimmed and lowercased, and dropped when blank', () => {
+  setupStorage();
+  saveDraft({ books: [], themeId: 'light-grid', owner: '  Sarah@Example.com ' });
+  assert.equal(readDraft().owner, 'sarah@example.com');
+  saveDraft({ books: [], themeId: 'light-grid', owner: '   ' });
+  assert.equal('owner' in readDraft(), false);
+});

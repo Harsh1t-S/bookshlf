@@ -213,7 +213,7 @@ export default function LandingPage({ onStart }) {
               ))}
             </div>
           </div>
-          <div className="panel" data-reveal>
+          <div className="panel" id="roadmap" data-reveal>
             <div className="top">
               <div className="row"><span className="t">New themes are in progress....</span><a className="u" href="/themes">Explore Future Themes here</a></div>
               <div><p>Share your email address or any social links which we can use to tell you when the new themes are available.</p><p>Don’t worry, we won’t sell or spam you. Pinky Promise!!</p></div>
@@ -254,7 +254,7 @@ export default function LandingPage({ onStart }) {
                 </div>
               ))}
             </div>
-            <div className="panel" data-reveal>
+            <div className="panel" id="contact" data-reveal>
               <div className="t">If you get a question., Do share it. You will get an answer within 24 hours. No AI replies.</div>
               <CaptureForm label="Your question" placeholder="Share your questions." />
             </div>
@@ -292,7 +292,7 @@ export default function LandingPage({ onStart }) {
           </div>
         </section>
       </main>
-      <div className="foot"><a href="/">Partner with Us</a><i className="dot" /><a href="#stories">Blogs</a><i className="dot" /><a href="/">Other Usecases</a><i className="dot" /><a href="/">Contact Us</a><i className="dot" /><a href="/">What is coming up? (Roadmap)</a></div>
+      <div className="foot"><a href="#contact">Partner with Us</a><i className="dot" /><a href="#stories">Blogs</a><i className="dot" /><a href="#themes">Other Usecases</a><i className="dot" /><a href="#contact">Contact Us</a><i className="dot" /><a href="#roadmap">What is coming up? (Roadmap)</a></div>
     </div>
   );
 }

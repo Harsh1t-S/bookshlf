@@ -1,43 +1,35 @@
-// The password_resets table: the emailed token is random and only its hash is stored.
+// The password_resets collection: the emailed token is random and only its hash is stored
+// (as _id). A TTL index (db/setup.js) deletes tokens once they expire.
 import { createHash, randomBytes } from 'node:crypto';
-import { db, query } from '../db/pool.js';
+import { collection } from '../db/client.js';
 import { HttpError } from '../utils/HttpError.js';
 import * as User from './user.model.js';
 
 const RESET_MINUTES = 60;
 
+const resets = () => collection('password_resets');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 
 // Returns the token to put in the emailed link.
 export async function create(userId) {
   const token = randomBytes(32).toString('base64url');
-  await query(
-    'INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? MINUTE))',
-    [sha256(token), userId, RESET_MINUTES],
-  );
+  await resets().insertOne({
+    _id: sha256(token),
+    user_id: userId,
+    expires_at: new Date(Date.now() + RESET_MINUTES * 60_000),
+    used_at: null,
+  });
   return token;
 }
 
-// Uses the token (once only) to set the new password, and returns the reader.
+// Uses the token (once only: marking it used is a single atomic update) to set the new
+// password, and returns the reader.
 export async function consume(token, passwordHash) {
-  const tokenHash = sha256(String(token));
-  const connection = await db().getConnection();
-  try {
-    await connection.beginTransaction();
-    const [rows] = await connection.execute(
-      'SELECT user_id FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > UTC_TIMESTAMP() FOR UPDATE',
-      [tokenHash],
-    );
-    if (!rows.length) throw new HttpError(400, 'This reset link has expired or was already used.');
-    const userId = rows[0].user_id;
-    await connection.execute('UPDATE password_resets SET used_at = UTC_TIMESTAMP() WHERE token_hash = ?', [tokenHash]);
-    await User.replacePassword(connection, userId, passwordHash);
-    await connection.commit();
-    return User.findById(userId);
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  const reset = await resets().findOneAndUpdate(
+    { _id: sha256(String(token)), used_at: null, expires_at: { $gt: new Date() } },
+    { $set: { used_at: new Date() } },
+  );
+  if (!reset) throw new HttpError(400, 'This reset link has expired or was already used.');
+  await User.replacePassword(reset.user_id, passwordHash);
+  return User.findById(reset.user_id);
 }

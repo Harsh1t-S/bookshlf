@@ -1,67 +1,70 @@
-// The users table: accounts, sign-in lockout and usernames (bookshelf.cv/<username>).
+// The users collection: accounts, sign-in lockout and usernames (bookshelf.cv/<username>).
+// Documents use _id = a UUID; the rest of the app sees it as user.id.
 import { randomUUID } from 'node:crypto';
-import { db, query } from '../db/pool.js';
+import { collection, isDuplicate } from '../db/client.js';
 import { HttpError } from '../utils/HttpError.js';
 import { normalizeUsername, usernameProblem } from '../validators/username.validator.js';
-import * as Shelf from './shelf.model.js';
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
 const TAKEN = 'That link is taken. Try another.';
 
-const isDuplicate = error => error?.code === 'ER_DUP_ENTRY';
+const users = () => collection('users');
+const toUser = doc => (doc ? { ...doc, id: doc._id } : null);
 
 export async function findById(id) {
-  return (await query('SELECT * FROM users WHERE id = ?', [id]))[0] ?? null;
+  return toUser(await users().findOne({ _id: id }));
 }
 
 export async function findByEmail(email) {
-  return (await query('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]))[0] ?? null;
+  return toUser(await users().findOne({ email: email.toLowerCase() }));
 }
 
 export async function findByGoogleSub(sub) {
-  return (await query('SELECT * FROM users WHERE google_sub = ?', [sub]))[0] ?? null;
+  return toUser(await users().findOne({ google_sub: sub }));
 }
 
 export async function findByUsername(value) {
   const username = normalizeUsername(value);
   if (usernameProblem(username)) return null;
-  return (await query('SELECT * FROM users WHERE username = ?', [username]))[0] ?? null;
+  return toUser(await users().findOne({ username }));
 }
 
-// Creates the reader and their empty shelf together.
+// A new reader starts with an empty shelf (see shelf.model.js), so only the user is stored here.
 export async function create({ email, name, passwordHash = null, googleSub = null, picture = null }) {
-  const id = randomUUID();
-  const connection = await db().getConnection();
+  const doc = {
+    _id: randomUUID(),
+    email: email.toLowerCase(),
+    name: name.slice(0, 120),
+    picture,
+    password_hash: passwordHash,
+    google_sub: googleSub,
+    username: null,
+    session_version: 0,
+    failed_logins: 0,
+    locked_until: null,
+    created_at: new Date(),
+  };
   try {
-    await connection.beginTransaction();
-    await connection.execute(
-      'INSERT INTO users (id, email, name, picture, password_hash, google_sub) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, email.toLowerCase(), name.slice(0, 120), picture, passwordHash, googleSub],
-    );
-    await Shelf.insertEmpty(connection, id);
-    await connection.commit();
+    await users().insertOne(doc);
   } catch (error) {
-    await connection.rollback();
     if (isDuplicate(error)) throw new HttpError(409, 'An account with this email already exists. Sign in instead.');
     throw error;
-  } finally {
-    connection.release();
   }
-  return findById(id);
+  return toUser(doc);
 }
 
 export async function linkGoogle(userId, { sub, picture }) {
-  await query('UPDATE users SET google_sub = ?, picture = COALESCE(picture, ?) WHERE id = ?', [sub, picture, userId]);
+  const user = await findById(userId);
+  await users().updateOne({ _id: userId }, { $set: { google_sub: sub, picture: user?.picture ?? picture } });
   return findById(userId);
 }
 
 // Sets a new password and signs out every device (their sessions carry the old session_version).
-// Runs inside the password-reset transaction (see passwordReset.model.js).
-export async function replacePassword(connection, userId, passwordHash) {
-  await connection.execute(
-    'UPDATE users SET password_hash = ?, session_version = session_version + 1, failed_logins = 0, locked_until = NULL WHERE id = ?',
-    [passwordHash, userId],
+export async function replacePassword(userId, passwordHash) {
+  await users().updateOne(
+    { _id: userId },
+    { $set: { password_hash: passwordHash, failed_logins: 0, locked_until: null }, $inc: { session_version: 1 } },
   );
 }
 
@@ -73,15 +76,14 @@ export function isLocked(user) {
 
 export async function recordFailedLogin(user) {
   const failures = user.failed_logins + 1;
-  if (failures >= MAX_FAILED_LOGINS) {
-    await query('UPDATE users SET failed_logins = 0, locked_until = DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? MINUTE) WHERE id = ?', [LOCK_MINUTES, user.id]);
-  } else {
-    await query('UPDATE users SET failed_logins = ? WHERE id = ?', [failures, user.id]);
-  }
+  const update = failures >= MAX_FAILED_LOGINS
+    ? { failed_logins: 0, locked_until: new Date(Date.now() + LOCK_MINUTES * 60_000) }
+    : { failed_logins: failures };
+  await users().updateOne({ _id: user.id }, { $set: update });
 }
 
 export async function clearFailedLogins(user) {
-  if (user.failed_logins || user.locked_until) await query('UPDATE users SET failed_logins = 0, locked_until = NULL WHERE id = ?', [user.id]);
+  if (user.failed_logins || user.locked_until) await users().updateOne({ _id: user.id }, { $set: { failed_logins: 0, locked_until: null } });
 }
 
 // --- Usernames ---
@@ -90,15 +92,15 @@ export async function usernameAvailability(value, userId = null) {
   const username = normalizeUsername(value);
   const problem = usernameProblem(username);
   if (problem) return { username, available: false, problem };
-  const taken = await query('SELECT id FROM users WHERE username = ? AND id <> ?', [username, userId ?? '']);
-  return { username, available: !taken.length, problem: taken.length ? TAKEN : '' };
+  const taken = await users().findOne({ username, _id: { $ne: userId ?? '' } }, { projection: { _id: 1 } });
+  return { username, available: !taken, problem: taken ? TAKEN : '' };
 }
 
 export async function claimUsername(userId, value) {
   const { username, available, problem } = await usernameAvailability(value, userId);
   if (!available) throw new HttpError(problem === TAKEN ? 409 : 400, problem);
   try {
-    await query('UPDATE users SET username = ? WHERE id = ?', [username, userId]);
+    await users().updateOne({ _id: userId }, { $set: { username } });
   } catch (error) {
     if (isDuplicate(error)) throw new HttpError(409, TAKEN);
     throw error;

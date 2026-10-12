@@ -7,11 +7,11 @@ Goodreads, a shelf photo, the built-in library or by hand) and share their shelf
 The repo has two apps:
 
 - `frontend/`: React 19 + Vite + Tailwind CSS v4.
-- `backend/`: Node 22 + Express 5 + MySQL, organised as MVC.
+- `backend/`: Node 22 + Express 5 + MongoDB (Atlas), organised as MVC.
 
 ## Development
 
-You need Node 22+ and a local MySQL server.
+You need Node 22+ and a MongoDB database (a free MongoDB Atlas cluster works).
 
 **Backend** on http://localhost:4000:
 
@@ -19,7 +19,7 @@ You need Node 22+ and a local MySQL server.
 cd backend
 npm install
 cp .env.example .env      # then fill it in (see "Environment variables")
-npm run db:setup          # creates the MySQL database and tables (safe to re-run)
+npm run db:setup          # creates the MongoDB indexes (safe to re-run)
 npm run dev
 ```
 
@@ -33,7 +33,7 @@ npm run dev
 ```
 
 From the repo root, `npm run dev`, `npm run dev:backend`, `npm run build` and `npm test`
-run the same scripts. The backend's database tests run only when `DATABASE_URL` is set.
+run the same scripts. The backend's database tests run only when `MONGODB_URI` is set.
 
 ## Environment variables
 
@@ -42,7 +42,7 @@ never commit them. Only the `.env.example` files are committed.
 
 | File | Variable | What it is |
 | --- | --- | --- |
-| `backend/.env` | `DATABASE_URL` | `mysql://USER:PASSWORD@localhost:3306/bookshelf` |
+| `backend/.env` | `MONGODB_URI` | MongoDB Atlas connection string, with your password filled in |
 | `backend/.env` | `SESSION_SECRET` | Long random string that signs session cookies |
 | `backend/.env` | `GOOGLE_CLIENT_ID` | Google OAuth **client ID** (see below) |
 | `backend/.env` | `APP_ORIGIN` | Site address used in password-reset links |
@@ -108,14 +108,16 @@ Both apps deploy to Vercel from this repo on every push to `main`:
   `VITE_RAZORPAY_KEY_ID`.
 - **Backend**: Vercel project `bookshlf-api` with root directory `backend/`
   (https://bookshlf-api.vercel.app). Vercel runs the Express app exported from `app.js`.
-  Needs `DATABASE_URL`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID` and `APP_ORIGIN`.
+  Needs `MONGODB_URI`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID` and `APP_ORIGIN`.
 - `frontend/vercel.json` proxies `/api/*` to the backend, so the browser only ever talks
   to the frontend's domain and the session cookie stays first-party. Every other path
   goes to the app, so deep links work.
-- The database must be reachable from Vercel: use a cloud MySQL such as TiDB Cloud, and
-  append `?ssl={"rejectUnauthorized":true}` to `DATABASE_URL`. To create the tables, put
-  that URL in `backend/.env.production` (git ignores it) and run
-  `node --env-file=.env.production db/setup.js` from `backend/`.
+- The database is MongoDB Atlas. In Atlas, under Network Access, allow `0.0.0.0/0`:
+  Vercel functions don't have fixed IP addresses. Run `npm run db:setup` once to create
+  the indexes.
+- If `mongodb+srv://` fails locally with `querySrv ECONNREFUSED`, your DNS server
+  refuses SRV lookups. Use Atlas's standard `mongodb://host1,host2,host3/...` connection
+  string in `backend/.env` instead.
 - Add the frontend's domain to the Google client's Authorized JavaScript origins.
 
 ## Structure
@@ -129,7 +131,7 @@ Both apps deploy to Vercel from this repo on every push to `main`:
   `usernames`, `shelves`, `goodreads`). `index.js` mounts them all under `/api`.
 - `controllers/`: request handlers. They read the request, call models and services,
   and answer with a view.
-- `models/`: all SQL, one file per table (`user`, `shelf`, `passwordReset`).
+- `models/`: all database access, one file per collection (`user`, `shelf`, `passwordReset`).
 - `views/`: the JSON shapes sent to the browser (`user.view.js`, `shelf.view.js`). Raw
   database rows never leave the server.
 - `middleware/`: `auth` (loads the signed-in reader, guards private routes), `jsonOnly`
@@ -137,7 +139,7 @@ Both apps deploy to Vercel from this repo on every push to `main`:
 - `services/`: outside systems: Google token checks, the Goodreads import, and email.
 - `validators/`: input rules for email, password, shelf data and usernames.
 - `utils/`: `HttpError`, password hashing and session cookies.
-- `db/`: `schema.sql`, the connection pool and the `db:setup` script.
+- `db/`: the MongoDB client (`client.js`) and the `db:setup` index script.
 - `test/`: API tests (`api.test.js`) and unit tests (`unit.test.js`).
 
 ### `frontend/src/`

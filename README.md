@@ -101,13 +101,22 @@ refunds them automatically. Live keys are refused until that endpoint exists.
 
 ## Deployment
 
-- **Frontend**: Vercel, with `frontend/` as the root directory. `frontend/vercel.json`
-  sends every non-API path to the app so deep links work.
-- **Backend**: any Node 22 host with MySQL. Set the variables from `backend/.env.example`
-  and `NODE_ENV=production`, and run `npm run db:setup` once.
-- The frontend calls `/api` on its own domain. Once the backend is hosted, add a Vercel
-  rewrite from `/api/:path*` to the backend's URL so the session cookie stays
-  first-party. Until then, sign-in and saving work only locally.
+Both apps deploy to Vercel from this repo on every push to `main`:
+
+- **Frontend**: Vercel project `bookshlf` with root directory `frontend/`
+  (https://bookshlf-nu.vercel.app). Needs `VITE_GOOGLE_CLIENT_ID` and
+  `VITE_RAZORPAY_KEY_ID`.
+- **Backend**: Vercel project `bookshlf-api` with root directory `backend/`
+  (https://bookshlf-api.vercel.app). Vercel runs the Express app exported from `app.js`.
+  Needs `DATABASE_URL`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID` and `APP_ORIGIN`.
+- `frontend/vercel.json` proxies `/api/*` to the backend, so the browser only ever talks
+  to the frontend's domain and the session cookie stays first-party. Every other path
+  goes to the app, so deep links work.
+- The database must be reachable from Vercel: use a cloud MySQL such as TiDB Cloud, and
+  append `?ssl={"rejectUnauthorized":true}` to `DATABASE_URL`. To create the tables, put
+  that URL in `backend/.env.production` (git ignores it) and run
+  `node --env-file=.env.production db/setup.js` from `backend/`.
+- Add the frontend's domain to the Google client's Authorized JavaScript origins.
 
 ## Structure
 

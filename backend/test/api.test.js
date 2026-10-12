@@ -1,9 +1,9 @@
 // HTTP tests against the real Express app. The "with database" suite runs only when
-// MONGODB_URI is set (backend/.env) and uses throwaway accounts it deletes afterwards.
+// DATABASE_URL is set (backend/.env) and uses throwaway accounts it deletes afterwards.
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import app from '../app.js';
-import { closeDb, collection } from '../db/client.js';
+import { closeDb, query } from '../db/pool.js';
 
 let server;
 let base;
@@ -56,17 +56,14 @@ describe('without a database', () => {
   });
 });
 
-describe('with database', { skip: !process.env.MONGODB_URI && 'MONGODB_URI not set' }, () => {
+describe('with database', { skip: !process.env.DATABASE_URL && 'DATABASE_URL not set' }, () => {
   const stamp = `${process.pid}${Math.floor(performance.now())}`;
   const email = `test-${stamp}@example.com`;
   const username = `test-${stamp}`;
   let cookie;
 
   after(async () => {
-    const ids = (await collection('users').find({ email: { $regex: `^test-${stamp}` } }).toArray()).map(user => user._id);
-    await collection('shelves').deleteMany({ _id: { $in: ids } });
-    await collection('password_resets').deleteMany({ user_id: { $in: ids } });
-    await collection('users').deleteMany({ _id: { $in: ids } });
+    await query('DELETE FROM users WHERE email LIKE ?', [`test-${stamp}%`]);
   });
 
   test('sign up signs the reader in with an empty shelf', async () => {

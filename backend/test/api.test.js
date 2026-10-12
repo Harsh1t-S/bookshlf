@@ -2,7 +2,7 @@
 // DATABASE_URL is set (backend/.env) and uses throwaway accounts it deletes afterwards.
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { createApp } from '../app.js';
+import app from '../app.js';
 import { closeDb, query } from '../db/pool.js';
 
 let server;
@@ -10,7 +10,7 @@ let base;
 
 before(async () => {
   process.env.SESSION_SECRET ||= 'test-secret-that-is-long-enough-for-hmac-signing';
-  server = createApp().listen(0);
+  server = app.listen(0);
   await new Promise(resolve => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}/api`;
 });

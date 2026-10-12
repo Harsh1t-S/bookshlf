@@ -8,7 +8,7 @@ let checkoutScript = null;
 export const razorpayKeyId = (import.meta.env.VITE_RAZORPAY_KEY_ID || '').trim();
 
 export function razorpayConfigError(key = razorpayKeyId) {
-  if (!key) return 'Razorpay is not configured. Add VITE_RAZORPAY_KEY_ID (a rzp_test_ key) to frontend/.env.local and restart the dev server.';
+  if (!key) return 'Razorpay is not configured. Add VITE_RAZORPAY_KEY_ID (a rzp_test_ key) to frontend/.env and restart the dev server.';
   if (!key.startsWith('rzp_test_')) return 'Only Razorpay test keys (rzp_test_…) are accepted until server-side orders are added.';
   return '';
 }

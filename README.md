@@ -28,7 +28,7 @@ npm run dev
 ```sh
 cd frontend
 npm install
-cp .env.example .env.local
+cp .env.example .env
 npm run dev
 ```
 
@@ -37,7 +37,7 @@ run the same scripts. The backend's database tests run only when `DATABASE_URL` 
 
 ## Environment variables
 
-Real values go in `backend/.env` and `frontend/.env.local`. Git ignores both files, so
+Real values go in `backend/.env` and `frontend/.env`. Git ignores both files, so
 never commit them. Only the `.env.example` files are committed.
 
 | File | Variable | What it is |
@@ -46,8 +46,8 @@ never commit them. Only the `.env.example` files are committed.
 | `backend/.env` | `SESSION_SECRET` | Long random string that signs session cookies |
 | `backend/.env` | `GOOGLE_CLIENT_ID` | Google OAuth **client ID** (see below) |
 | `backend/.env` | `APP_ORIGIN` | Site address used in password-reset links |
-| `frontend/.env.local` | `VITE_GOOGLE_CLIENT_ID` | The same Google client ID |
-| `frontend/.env.local` | `VITE_RAZORPAY_KEY_ID` | Razorpay test key id (`rzp_test_…`) |
+| `frontend/.env` | `VITE_GOOGLE_CLIENT_ID` | The same Google client ID |
+| `frontend/.env` | `VITE_RAZORPAY_KEY_ID` | Razorpay test key id (`rzp_test_…`) |
 
 ### Google sign-in
 
@@ -92,7 +92,7 @@ Vite builds those into the public JavaScript.
 ## Razorpay (test mode)
 
 Premium looks are paid through Razorpay Checkout in test mode. Set
-`VITE_RAZORPAY_KEY_ID` in `frontend/.env.local` to your `rzp_test_…` key id and restart
+`VITE_RAZORPAY_KEY_ID` in `frontend/.env` to your `rzp_test_…` key id and restart
 `npm run dev`. On Vercel, add the same variable to the project and redeploy.
 
 Pay with Razorpay's test cards or the UPI id `success@razorpay`. The backend doesn't

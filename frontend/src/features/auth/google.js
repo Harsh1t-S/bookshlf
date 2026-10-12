@@ -25,11 +25,17 @@ export function preloadGoogle() {
   return script;
 }
 
-export async function requestGoogleAccessToken() {
-  if (!clientId) throw new Error('Google sign-in isn’t set up yet. Use your email and password for now.');
-  const google = await preloadGoogle();
+// Opens Google's popup synchronously, inside the click that called it: browsers (Safari
+// strictly) only allow a popup opened directly by a click, so nothing is awaited first.
+export function requestGoogleAccessToken() {
+  if (!clientId) return Promise.reject(new Error('Google sign-in isn’t set up yet. Use your email and password for now.'));
+  const oauth2 = window.google?.accounts?.oauth2;
+  if (!oauth2) {
+    preloadGoogle().catch(() => {});
+    return Promise.reject(new Error('Google sign-in is still loading. Try again in a moment.'));
+  }
   return new Promise((resolve, reject) => {
-    google.accounts.oauth2.initTokenClient({
+    oauth2.initTokenClient({
       client_id: clientId,
       scope: 'openid email profile',
       callback: response => (response.error

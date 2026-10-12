@@ -71,3 +71,18 @@
   .sp-shares { gap: 10px; }
   .sp-share { height: 38px; padding: 0 14px; font-size: 14px; }
 }
+
+/* Claim / change bookshelf.cv/<username> */
+.sp-claim { position: relative; width: 605px; max-width: 100%; margin-top: 26px; text-align: left; }
+.sp-claim > label { display: block; margin-bottom: 8px; font: 600 14px/20px 'Inter', sans-serif; color: #1c1209; text-align: center; }
+.sp-claim .sp-link { margin-top: 0; gap: 4px; }
+.sp-claim .sp-link i[data-state='bad'] { background: #dc2626; }
+.sp-claim .sp-link i[data-state='checking'], .sp-claim .sp-link i[data-state='idle'] { background: #d6cfc3; }
+.sp-claim__host { flex: none !important; color: #7a7a7a; }
+.sp-claim input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: none; font: 500 16px/20px 'Inter', sans-serif; color: #1c1209; }
+.sp-claim .sp-link button { margin-left: 8px; }
+.sp-claim .sp-link button:disabled { opacity: .45; cursor: not-allowed; text-decoration: none; }
+.sp-claim__status { min-height: 20px; margin: 6px 0 0; font: 500 13px/20px 'Inter', sans-serif; text-align: center; color: #6f655b; }
+.sp-claim__status[data-state='ok'] { color: #15803d; }
+.sp-claim__status[data-state='bad'] { color: #b91c1c; }
+.sp-link__edit { color: #6f655b !important; }

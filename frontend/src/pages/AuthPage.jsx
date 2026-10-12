@@ -1,15 +1,17 @@
-import AuthForm from '../features/auth/AuthForm.jsx';
 import usePageTitle from '../app/usePageTitle.js';
+import AuthForm from '../features/auth/AuthForm.jsx';
 
 // /signup and /login.
 export default function AuthPage({ app }) {
-  usePageTitle(app.pathname === '/login' ? 'Sign in' : 'Create your account');
+  const isLogin = app.pathname === '/login';
+  usePageTitle(isLogin ? 'Sign in' : 'Create your account');
   return (
     <AuthForm
       key={app.pathname}
-      mode={app.pathname === '/login' ? 'login' : 'signup'}
+      mode={isLogin ? 'login' : 'signup'}
       onModeChange={mode => app.navigate(mode === 'login' ? '/login' : '/signup')}
-      onContinue={app.signIn}
+      onSubmit={isLogin ? app.logIn : app.signUp}
+      onGoogle={app.continueWithGoogle}
     />
   );
 }

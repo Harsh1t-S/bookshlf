@@ -25,12 +25,17 @@ function ShareButton({ kind, label, href, onClick }) {
     : <button type="button" className="sp-share" data-kind={kind} onClick={onClick}>{content}</button>;
 }
 
-export default function ShelfLayout({ books = [], theme, title, since, isDemo, onSignOut, onModify, onAddBook, onStart }) {
+// Shared shelf page: nav, hero with the share link, and the shelf itself.
+// shareUrl is null until the owner claims a username; linkEditor replaces the link box.
+export default function ShelfLayout({
+  books = [], theme, title, since, isDemo, shareUrl = window.location.href.split('#')[0], linkEditor, onEditLink, notice,
+  onSignOut, onModify, onAddBook, onStart,
+}) {
   const [status, setStatus] = useState('');
   const [selection, setSelection] = useState(null);
   const timer = useRef(0);
   const selected = getTheme(theme);
-  const shelfUrl = window.location.href.split('#')[0];
+  const shelfUrl = shareUrl ?? '';
   const shownUrl = shelfUrl.replace(/^https?:\/\//, '');
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -77,19 +82,22 @@ export default function ShelfLayout({ books = [], theme, title, since, isDemo, o
         <p className="sp-eyebrow">BOOKSHELF.CV/</p>
         <h1 className="sp-title">{title}</h1>
         <p className="sp-meta">{books.length} {books.length === 1 ? 'book' : 'books'} · reading since {since}</p>
-        <div className="sp-link">
-          <i aria-hidden="true" />
-          <span title={shelfUrl}>{shownUrl}</span>
-          <button type="button" onClick={() => copyLink()}>Copy link</button>
-        </div>
-        <div className="sp-shares">
+        {linkEditor ?? (
+          <div className="sp-link">
+            <i aria-hidden="true" />
+            <span title={shelfUrl}>{shownUrl}</span>
+            {onEditLink && <button type="button" className="sp-link__edit" onClick={onEditLink}>Change</button>}
+            <button type="button" onClick={() => copyLink()}>Copy link</button>
+          </div>
+        )}
+        {shareUrl && <div className="sp-shares">
           <ShareButton kind="x" label="Twitter / X" href={`https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`} />
           <ShareButton kind="linkedin" label="LinkedIn" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`} />
           <ShareButton kind="instagram" label="Instagram" onClick={() => copyLink('Link copied — paste it into your Instagram bio or story')} />
           <ShareButton kind="facebook" label="Facebook" href={`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`} />
           <ShareButton kind="whatsapp" label="WhatsApp" href={`https://wa.me/?text=${encodeURIComponent(`${title} ${shelfUrl}`)}`} />
-        </div>
-        <p className="sp-status" role="status" aria-live="polite">{status}</p>
+        </div>}
+        <p className="sp-status" role="status" aria-live="polite">{status || notice}</p>
       </header>
 
       <main>

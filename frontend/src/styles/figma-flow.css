@@ -276,3 +276,9 @@
   .fg-theme-grid { grid-template-columns: 1fr; }
   .fg-head h1 { font-size: 28px; }
 }
+
+/* Account extras: forgot-password link and confirmation note */
+.fg-auth__forgot { display: inline-block; margin-top: 8px; font: 500 14px/20px 'Inter', sans-serif; color: var(--fg-brown); text-decoration: underline; text-underline-offset: 3px; }
+.fg-auth__note { margin: 0; padding: 16px; border: 2px solid #6dd18b; border-radius: 12px; background: #dcfce7; font: 400 15px/22px 'Inter', sans-serif; color: var(--fg-ink); }
+.fg-auth .acc a { font: 700 14px/20px 'Inter', sans-serif; color: #1f1f1f; text-decoration: underline; }
+.fg-auth .g:disabled, .fg-auth .fg-cta:disabled { opacity: .7; cursor: progress; }

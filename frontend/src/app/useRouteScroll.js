@@ -4,8 +4,10 @@ const USER_SCROLL_EVENTS = ['wheel', 'touchstart', 'keydown', 'pointerdown'];
 
 // On every page change: land on a #section if the URL names one, otherwise start
 // at the top and move focus to the page heading for screen-reader users.
+// pathname is null while the app is still loading (nothing to scroll to yet).
 export default function useRouteScroll(pathname) {
   useEffect(() => {
+    if (pathname === null) return undefined;
     const anchor = window.location.hash && document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
     if (anchor) {
       // Images and fonts above the section keep shifting it while they load, so stay on the

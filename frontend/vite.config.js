@@ -4,8 +4,9 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  // The API lives in ../backend (npm run dev there, port 4000); the dev server forwards /api to it.
+  // The dev server forwards /api to the live API. To try backend changes, run ../backend
+  // (npm run dev, port 4000) and start this with API_PROXY=http://localhost:4000.
   server: {
-    proxy: { '/api': 'https://api.bookfolio.live' },
+    proxy: { '/api': process.env.API_PROXY || 'https://api.bookfolio.live' },
   },
 })

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { before, mock, test } from 'node:test';
+import { rateLimit } from '../middleware/rateLimit.middleware.js';
 import { importGoodreads } from '../services/goodreads.service.js';
+import { searchBooks, toBooks } from '../services/openLibrary.service.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { readSession, startSession } from '../utils/session.js';
 import { passwordProblem } from '../validators/password.validator.js';
@@ -90,4 +92,53 @@ test('Goodreads: private shelves (401) and unknown ids (404) get clear errors', 
     fetchMock.mock.restore();
     warn.mock.restore();
   }
+});
+
+test('Open Library: results become shelf books with covers, first authors and no repeats', () => {
+  assert.deepEqual(toBooks([
+    { key: '/works/OL17930368W', title: 'Atomic Habits', author_name: ['James Clear'], cover_i: 12539702, first_publish_year: 2016 },
+    { key: '/works/OL2W', title: 'atomic habits', author_name: ['James Clear', 'Someone Else'] },
+    { key: '/works/OL3W', title: 'Good Omens', author_name: ['Terry Pratchett', 'Neil Gaiman'], cover_i: -1 },
+    { key: '/works/OL4W', title: 'No Author' },
+    { key: '/works/OL5W', title: '  ', author_name: ['Nobody'] },
+  ]), [
+    { openLibraryId: 'OL17930368W', title: 'Atomic Habits', author: 'James Clear', cover: 'https://covers.openlibrary.org/b/id/12539702-L.jpg', year: 2016 },
+    { openLibraryId: 'OL3W', title: 'Good Omens', author: 'Terry Pratchett', cover: null, year: null },
+  ]);
+});
+
+test('Open Library: short queries are refused and busy or failing answers get clear errors', async () => {
+  await assert.rejects(searchBooks(' a '), { status: 400, message: /at least 2/ });
+  for (const [status, expected] of [[429, { status: 503, message: /busy/ }], [500, { status: 502, message: /didn’t respond/ }]]) {
+    const fetchMock = mock.method(globalThis, 'fetch', async () => new Response('', { status }));
+    const warn = mock.method(console, 'warn', () => {});
+    await assert.rejects(searchBooks('dune'), expected);
+    fetchMock.mock.restore();
+    warn.mock.restore();
+  }
+});
+
+test('Open Library: the same search, typed differently or at the same time, makes one call', async () => {
+  const doc = { key: '/works/OL1W', title: 'Cache Test', author_name: ['A. Writer'] };
+  const fetchMock = mock.method(globalThis, 'fetch', async () => Response.json({ docs: [doc] }));
+  const [first, second] = await Promise.all([searchBooks('cache  test'), searchBooks('Cache Test')]);
+  const third = await searchBooks('CACHE TEST');
+  assert.equal(fetchMock.mock.callCount(), 1);
+  assert.equal(first, second);
+  assert.equal(first, third);
+  assert.equal(first.books[0].title, 'Cache Test');
+  fetchMock.mock.restore();
+});
+
+test('rate limit: each reader gets their own allowance, then 429 with Retry-After', () => {
+  const limit = rateLimit({ limit: 2, windowMs: 60_000 });
+  const headers = {};
+  const response = { set: (name, value) => { headers[name] = value; } };
+  const next = mock.fn();
+  limit({ user: { id: 'reader-1' } }, response, next);
+  limit({ user: { id: 'reader-1' } }, response, next);
+  assert.throws(() => limit({ user: { id: 'reader-1' } }, response, next), { status: 429 });
+  assert.equal(headers['Retry-After'], '60');
+  limit({ user: { id: 'reader-2' } }, response, next);
+  assert.equal(next.mock.callCount(), 3);
 });

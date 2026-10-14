@@ -90,7 +90,6 @@ export default function AddBooks({ books = [], catalog = [], onBooksChange, onCo
         hidden={mode !== 'library'}
         books={fromSource('library')}
         shelf={books}
-        catalog={catalog}
         onToggle={toggleLibraryBook}
         onRemove={removeBook}
         onAddManually={addManually('library')}

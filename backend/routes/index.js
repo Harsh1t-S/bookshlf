@@ -1,6 +1,7 @@
 // Every API endpoint, mounted under /api by app.js.
 import { Router } from 'express';
 import authRoutes from './auth.routes.js';
+import bookRoutes from './books.routes.js';
 import goodreadsRoutes from './goodreads.routes.js';
 import meRoutes from './me.routes.js';
 import shelfRoutes from './shelf.routes.js';
@@ -13,5 +14,6 @@ router.use('/me', meRoutes);
 router.use('/usernames', usernameRoutes);
 router.use('/shelves', shelfRoutes);
 router.use('/goodreads', goodreadsRoutes);
+router.use('/books', bookRoutes);
 
 export default router;

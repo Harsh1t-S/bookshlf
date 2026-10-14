@@ -23,7 +23,9 @@ npm run db:setup          # creates the MySQL database and tables (safe to re-ru
 npm run dev
 ```
 
-**Frontend** on http://localhost:5173. The dev server forwards `/api` to the backend.
+**Frontend** on http://localhost:5173. The dev server forwards `/api` to the live API
+(`https://api.bookfolio.live`). To try local backend changes, start the backend and run
+the frontend with `API_PROXY=http://localhost:4000` set.
 
 ```sh
 cd frontend
@@ -83,6 +85,11 @@ Vite builds those into the public JavaScript.
   Spine Shelf and MacOS are premium (₹749 / ₹1,249 / ₹1,749 + 18% GST).
 - The Goodreads import is real: the backend reads the reader's public "Read" and
   "Currently Reading" shelves. Photo recognition is still simulated with catalog titles.
+- The book library searches Open Library through `GET /api/books/search?q=…` (free, no
+  key, about 3 requests a second). The panel waits 350 ms after typing stops (debounce).
+  The route needs a signed-in reader, allows 30 searches a minute per reader, starts
+  Open Library calls at least 350 ms apart, and caches answers for an hour in memory and
+  in the browser. Google Books is the planned replacement once the client approves its cost.
 - The shelf is saved on the server. The browser keeps a copy so pages render before the
   server answers.
 - Routes: `/`, `/signup`, `/login`, `/forgot`, `/reset?token=…`, `/themes`,
@@ -127,15 +134,17 @@ Both apps deploy to Vercel from this repo on every push to `main`:
 - `app.js`: the Express app: JSON body parsing, the JSON-only guard, routes and the
   error handler.
 - `routes/`: maps URLs to controllers, one file per resource (`auth`, `me`,
-  `usernames`, `shelves`, `goodreads`). `index.js` mounts them all under `/api`.
+  `usernames`, `shelves`, `goodreads`, `books`). `index.js` mounts them all under `/api`.
 - `controllers/`: request handlers. They read the request, call models and services,
   and answer with a view.
 - `models/`: all SQL, one file per table (`user`, `shelf`, `passwordReset`).
 - `views/`: the JSON shapes sent to the browser (`user.view.js`, `shelf.view.js`). Raw
   database rows never leave the server.
 - `middleware/`: `auth` (loads the signed-in reader, guards private routes), `jsonOnly`
-  (no-store + JSON-only writes) and `error` (404 and error responses).
-- `services/`: outside systems: Google token checks, the Goodreads import, and email.
+  (no-store + JSON-only writes), `rateLimit` (per-reader request limits) and `error`
+  (404 and error responses).
+- `services/`: outside systems: Google token checks, the Goodreads import, Open Library
+  book search, and email.
 - `validators/`: input rules for email, password, shelf data and usernames.
 - `utils/`: `HttpError`, password hashing and session cookies.
 - `db/`: `schema.sql`, the connection pool and the `db:setup` script.

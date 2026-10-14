@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Bookshelf.cv API: accounts (email + Google), shelves, usernames and Goodreads import.",
+  "description": "Bookshelf.cv API: accounts (email + Google), shelves, usernames, Goodreads import and book search.",
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch server.js",
     "start": "node --env-file-if-exists=.env server.js",

@@ -44,6 +44,7 @@ describe('without a database', () => {
 
   test('protected routes need a session', async () => {
     assert.equal((await call('/me/shelf', { method: 'PUT', body: { books: [] } })).status, 401);
+    assert.equal((await call('/books/search?q=dune')).status, 401);
   });
 
   test('bad sign-up input is rejected before touching the database', async () => {

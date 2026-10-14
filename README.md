@@ -86,8 +86,9 @@ Vite builds those into the public JavaScript.
 - The shelf is saved on the server. The browser keeps a copy so pages render before the
   server answers.
 - Routes: `/`, `/signup`, `/login`, `/forgot`, `/reset?token=…`, `/themes`,
-  `/purchase?theme=<id>`, `/books`, `/shelf`, `/demo?theme=<id>`, and `/<username>` for
-  public shelves. Direct links and refreshes work on all of them.
+  `/purchase?theme=<id>`, `/books`, `/shelf`, `/demo?theme=<id>`, `/privacy`, `/terms`,
+  `/refunds`, and `/<username>` for public shelves. Direct links and refreshes work on
+  all of them.
 
 ## Razorpay (test mode)
 
@@ -161,9 +162,12 @@ Both apps deploy to Vercel from this repo on every push to `main`:
     `panels/` has one panel per source (Goodreads, photo, library), and `BookEditor.jsx`
     handles manual entry.
   - `checkout/`: the checkout page and the Razorpay loader (test mode).
+  - `legal/`: copy for the privacy policy, terms and refund & cancellation policy
+    (no refunds, returns or cancellations), and the support email they show.
   - `shelf/`: the six shelf looks, scaled previews, the shelf page layout, the username
     claim and the book-opening reading card.
-- `components/`: shared building blocks: the setup-flow shell, book cover and modal.
+- `components/`: shared building blocks: the setup-flow shell, book cover, modal and the
+  policy footer (with the Trusting Brains credit).
 - `hooks/useReveal.js`: fade-in-on-scroll for landing sections.
 - `data/`: book catalog, theme definitions and Figma asset paths.
 - `lib/`: the API client (`api.js`), the browser shelf cache (`browserStorage.js`, with

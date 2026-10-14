@@ -5,7 +5,7 @@
 const RESERVED = new Set([
   'signup', 'login', 'logout', 'forgot', 'reset', 'themes', 'books', 'purchase', 'shelf', 'demo',
   'api', 'assets', 'figma', 'admin', 'settings', 'account', 'help', 'support', 'about', 'blog', 'blogs',
-  'terms', 'privacy', 'pricing', 'contact', 'roadmap', 'www', 'app', 'static', 'index', 'null', 'undefined',
+  'terms', 'privacy', 'refunds', 'pricing', 'contact', 'roadmap', 'www', 'app', 'static', 'index', 'null', 'undefined',
 ]);
 
 export const USERNAME_HINT = '3–30 letters, numbers or dashes';

@@ -133,6 +133,7 @@
   .foot { background: #faf2de; padding: 24px; display: flex; gap: 16px; align-items: center; justify-content: center; white-space: nowrap; text-align: center; }
   .foot a { text-decoration: underline; }
   .foot .dot::before { background: #000; opacity: .2; }
+  .legal-foot { background: #faf2de; }
 }
 
 /* Below the 1440px Figma frame: keep the layout, tighten gutters, then stack. */

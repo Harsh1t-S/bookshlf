@@ -5,6 +5,7 @@ import CheckoutPage from './pages/CheckoutPage.jsx';
 import DemoPage from './pages/DemoPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
+import LegalPage from './pages/LegalPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import PublicShelfPage from './pages/PublicShelfPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
@@ -22,6 +23,9 @@ const pages = {
   '/books': BooksPage,
   '/shelf': ShelfPage,
   '/demo': DemoPage,
+  '/privacy': LegalPage,
+  '/terms': LegalPage,
+  '/refunds': LegalPage,
 };
 
 // Any other single-segment path is a reader's public shelf: bookshelf.cv/<username>.

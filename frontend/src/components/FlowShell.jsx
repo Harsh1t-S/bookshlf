@@ -54,12 +54,13 @@ export function FlowNav({ left, right }) {
   );
 }
 
-export default function FlowShell({ navRight, children, className = '' }) {
+export default function FlowShell({ navRight, children, footer, className = '' }) {
   return (
     <div className={`fg-flow ${className}`}>
       <FlowDecor />
       <FlowNav right={navRight} />
       <main className="fg-flow__main">{children}</main>
+      {footer}
     </div>
   );
 }

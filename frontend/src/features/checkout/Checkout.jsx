@@ -148,6 +148,9 @@ export default function Checkout({ theme, name = '', email = '', onBack, onPaid 
           {error && <p className="pp-error" role="alert">{error}</p>}
 
           <button type="submit" className="pp-pay" disabled={paying}>{paying ? 'Opening Razorpay…' : 'Continue to Payment'}</button>
+          <p className="pp-terms">
+            By continuing you agree to our <a href="/terms" target="_blank" rel="noreferrer">Terms &amp; Conditions</a> and <a href="/refunds" target="_blank" rel="noreferrer">Refund &amp; Cancellation Policy</a>. All purchases are final: no refunds or cancellations.
+          </p>
 
           <p className="pp-legal">Payments are processed securely by Razorpay. This checkout runs in <strong>test mode</strong> — use Razorpay test cards or UPI <code>success@razorpay</code>; no real money is charged.</p>
           <p className="pp-brand">

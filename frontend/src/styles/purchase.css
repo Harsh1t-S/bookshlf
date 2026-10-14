@@ -77,6 +77,8 @@
 .pp-pay { margin-top: 22px; height: 38px; border: 0; border-radius: 6px; background: #2b2b2b; font-weight: 600 !important; color: #fff !important; }
 .pp-pay:hover { background: #e13a00; }
 .pp-pay:disabled { opacity: .7; }
+.pp-terms { margin: 14px 0 0; font-size: 12px; line-height: 18px; color: #d4d4d4; text-align: center; }
+.pp-terms a { color: #fafafa; text-decoration: underline; text-underline-offset: 2px; }
 .pp-legal { margin: 26px 0 0; font-size: 12px; line-height: 18px; color: #bdbdbd; text-align: center; }
 .pp-legal code { font-size: 11px; color: #fafafa; }
 .pp-brand { margin: 14px 0 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: #a3a3a3; }

@@ -73,6 +73,7 @@ test('shelf cleaning caps the number of books and dedupes purchases', () => {
 test('usernames: valid, reserved and malformed names, and suggestions', () => {
   assert.equal(usernameProblem('holland-mckay'), '');
   assert.match(usernameProblem('themes'), /reserved/);
+  assert.match(usernameProblem('refunds'), /reserved/);
   assert.match(usernameProblem('ab'), /3–30/);
   assert.match(usernameProblem('-bad-'), /dashes/);
   assert.match(usernameProblem('has space'), /letters/);

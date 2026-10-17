@@ -1,5 +1,4 @@
 import FlowShell from '../components/FlowShell.jsx';
-import catalog from '../data/books.js';
 import AuthNavLink from '../features/auth/AuthNavLink.jsx';
 import AddBooks from '../features/books/AddBooks.jsx';
 import usePageTitle from '../app/usePageTitle.js';
@@ -9,7 +8,7 @@ export default function BooksPage({ app }) {
   usePageTitle('Add your books');
   return (
     <FlowShell navRight={<AuthNavLink app={app} />}>
-      <AddBooks books={app.books} catalog={catalog} onBooksChange={app.setBooks} onContinue={() => app.navigate('/shelf')} />
+      <AddBooks books={app.books} onBooksChange={app.setBooks} onContinue={() => app.navigate('/shelf')} />
     </FlowShell>
   );
 }

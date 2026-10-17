@@ -3,7 +3,7 @@ import { themePrice, themes } from '../../data/themes.js';
 // Copy for the legal pages. Premium looks are one-time digital purchases with no
 // refunds, returns or cancellations; keep the three documents consistent on that.
 export const CONTACT_EMAIL = 'support@bookfolio.live';
-export const LAST_UPDATED = '14 October 2026';
+export const LAST_UPDATED = '17 October 2026';
 
 const mail = <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>;
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
@@ -41,6 +41,7 @@ const privacy = {
         <li><strong>Google</strong>, to verify your sign-in when you choose “Continue with Google”.</li>
         <li><strong>Razorpay</strong>, to process your payment.</li>
         <li><strong>Open Library</strong>, which receives the words you type into book search, sent from our server without your name or email. Book covers load directly from Open Library.</li>
+        <li><strong>Google (Gemini API)</strong>, which receives the shelf photos you upload so it can read the titles and authors on them. We send a shrunk copy, without its location data, from our server without your name or email. Google may use these photos to improve its products, so photograph only your books.</li>
         <li><strong>Our hosting and database providers</strong>, which store and serve our data on our behalf.</li>
         <li><strong>Government or law-enforcement authorities</strong>, when the law requires it.</li>
       </ul>
@@ -71,7 +72,7 @@ const terms = {
       <p>Prices are in Indian rupees and the amount you pay is shown at checkout. Payments are processed by Razorpay. A premium look unlocks on your account as soon as the payment succeeds, and you can use it for as long as your account and the service exist. Purchases are tied to your account and cannot be transferred. We may change prices for future purchases.</p>
       <p><strong>All purchases are final. There are no refunds, returns or cancellations</strong>, as explained in our <a href="/refunds">Refund &amp; Cancellation Policy</a>.</p>
     </>],
-    ['Third-party services', <p>Sign-in with Google, Goodreads imports and Razorpay payments are provided by those companies under their own terms. Book search results and covers come from Open Library. Bookfolio is not affiliated with or endorsed by Goodreads, and we are not responsible for third-party services.</p>],
+    ['Third-party services', <p>Sign-in with Google, Goodreads imports and Razorpay payments are provided by those companies under their own terms. Book search results and covers come from Open Library, and shelf photos are read by Google’s Gemini API, which can misread a title. Bookfolio is not affiliated with or endorsed by Goodreads, and we are not responsible for third-party services.</p>],
     ['Our intellectual property', <p>The Bookfolio name, site, looks, artwork and code belong to us or our licensors. Buying a look gives you a personal licence to use it on your shelf, not ownership of the design.</p>],
     ['Changes and availability', <p>We may add, change or remove features. We work to keep the site running, but we can’t promise it will always be available or error-free.</p>],
     ['Ending your account', <p>You can stop using Bookfolio at any time and ask us to delete your account. We may suspend or close an account that breaks these terms, without a refund.</p>],

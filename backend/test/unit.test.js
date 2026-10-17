@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
 import { before, mock, test } from 'node:test';
+import { scan } from '../controllers/books.controller.js';
 import { rateLimit } from '../middleware/rateLimit.middleware.js';
+import { MAX_BOOKS_PER_PHOTO, readShelfPhoto } from '../services/gemini.service.js';
 import { importGoodreads } from '../services/goodreads.service.js';
-import { searchBooks, toBooks } from '../services/openLibrary.service.js';
+import { matchBooks, searchBooks, toBooks } from '../services/openLibrary.service.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { readSession, startSession } from '../utils/session.js';
 import { passwordProblem } from '../validators/password.validator.js';
+import { MAX_PHOTO_CHARS, cleanPhoto } from '../validators/photo.validator.js';
 import { MAX_BOOKS, cleanShelf } from '../validators/shelf.validator.js';
 import { suggestUsername, usernameProblem } from '../validators/username.validator.js';
 
 before(() => {
   process.env.SESSION_SECRET = 'test-secret-that-is-long-enough-for-hmac-signing';
+  delete process.env.GEMINI_API_KEY; // Tests set a fake key; they never call the real Gemini API.
 });
 
 test('passwords hash with a salt and only verify with the right password', async () => {
@@ -101,9 +105,11 @@ test('Open Library: results become shelf books with covers, first authors and no
     { key: '/works/OL3W', title: 'Good Omens', author_name: ['Terry Pratchett', 'Neil Gaiman'], cover_i: -1 },
     { key: '/works/OL4W', title: 'No Author' },
     { key: '/works/OL5W', title: '  ', author_name: ['Nobody'] },
+    { key: '/works/OL6W', title: 'The Alchemist', author_name: ['Paulo Coelho (Author)'] },
   ]), [
     { openLibraryId: 'OL17930368W', title: 'Atomic Habits', author: 'James Clear', cover: 'https://covers.openlibrary.org/b/id/12539702-L.jpg', year: 2016 },
     { openLibraryId: 'OL3W', title: 'Good Omens', author: 'Terry Pratchett', cover: null, year: null },
+    { openLibraryId: 'OL6W', title: 'The Alchemist', author: 'Paulo Coelho', cover: null, year: null },
   ]);
 });
 
@@ -128,6 +134,116 @@ test('Open Library: the same search, typed differently or at the same time, make
   assert.equal(first, third);
   assert.equal(first.books[0].title, 'Cache Test');
   fetchMock.mock.restore();
+});
+
+test('Open Library matching: exact titles win, wrong authors are refused, unmatched books keep what was read', async () => {
+  const docs = {
+    'Match Test One writer': [
+      { key: '/works/OL10W', title: 'Match Test One: The Sequel', author_name: ['J. K. Writer'] },
+      { key: '/works/OL11W', title: 'Match Test One', author_name: ['J. K. Writer'], cover_i: 7, first_publish_year: 1999 },
+    ],
+    'Match Test Two author': [{ key: '/works/OL12W', title: 'Match Test Two', author_name: ['Someone Else'] }],
+    'Match Test Three': [{ key: '/works/OL13W', title: 'Match Test Three: With a Subtitle', author_name: ['Real Author'] }],
+    'Match Test Five author': [{ key: '/works/OL14W', title: 'Match Test Fifty', author_name: ['Ann Author'] }],
+    'Match Test Six author': [
+      { key: '/works/OL15W', title: 'Match Test Six and Other Essays', author_name: ['Ann Author'] },
+      { key: '/works/OL16W', title: 'Match Test Six (adaptation)', author_name: ['Someone Else'] },
+    ],
+  };
+  const fetchMock = mock.method(globalThis, 'fetch', async url => Response.json({ docs: docs[new URL(url).searchParams.get('q')] ?? [] }));
+  assert.deepEqual(await matchBooks([
+    { title: 'Match Test One', author: 'J.K. Writer' },
+    { title: 'Match Test Two', author: 'Ann Author' },
+    { title: 'Match Test Three', author: '' },
+    { title: 'Match Test Four', author: '' },
+    { title: 'Match Test One', author: 'J. K. Writer' },
+    { title: 'Match Test Five', author: 'Ann Author' },
+    { title: 'Match Test Six', author: 'Ann Author' },
+  ]), [
+    { openLibraryId: 'OL11W', title: 'Match Test One', author: 'J. K. Writer', cover: 'https://covers.openlibrary.org/b/id/7-L.jpg', year: 1999 },
+    { openLibraryId: null, title: 'Match Test Two', author: 'Ann Author', cover: null, year: null },
+    { openLibraryId: 'OL13W', title: 'Match Test Three: With a Subtitle', author: 'Real Author', cover: null, year: null },
+    { openLibraryId: null, title: 'Match Test Five', author: 'Ann Author', cover: null, year: null },
+    { openLibraryId: null, title: 'Match Test Six', author: 'Ann Author', cover: null, year: null },
+  ]);
+  fetchMock.mock.restore();
+});
+
+test('photos must be base64 JPEGs within the size cap', () => {
+  assert.equal(cleanPhoto('/9j/4AAQSkZJRg=='), '/9j/4AAQSkZJRg==');
+  assert.throws(() => cleanPhoto(undefined), { status: 400, message: /Choose a photo/ });
+  assert.throws(() => cleanPhoto('iVBORw0KGgo='), { status: 400, message: /JPEG/ }); // A PNG.
+  assert.throws(() => cleanPhoto('/9j/<script>'), { status: 400 });
+  assert.throws(() => cleanPhoto(`/9j/${'A'.repeat(MAX_PHOTO_CHARS)}`), { status: 413 });
+});
+
+function geminiReply(answer) {
+  return Response.json({ candidates: [{ content: { parts: [{ text: typeof answer === 'string' ? answer : JSON.stringify(answer) }] } }] });
+}
+
+test('Gemini: sends the photo with the key in a header and cleans the answer', async () => {
+  process.env.GEMINI_API_KEY = 'test-gemini-key';
+  let sent;
+  const many = Array.from({ length: 40 }, (_, index) => ({ title: `Book ${index}`, author: `Writer ${index}` }));
+  const fetchMock = mock.method(globalThis, 'fetch', async (url, options) => {
+    sent = { url, options };
+    return geminiReply({ books: [
+      { title: '  Dune  ', author: 'Frank   Herbert' },
+      { title: 'dune', author: 'frank herbert' },
+      { title: '', author: 'Nobody' },
+      { title: 'Mystery Spine', author: 'Unknown' },
+      ...many,
+    ] });
+  });
+  const found = await readShelfPhoto('/9j/AAAA');
+  assert.equal(found.length, MAX_BOOKS_PER_PHOTO);
+  assert.deepEqual(found.slice(0, 3), [
+    { title: 'Dune', author: 'Frank Herbert' },
+    { title: 'Mystery Spine', author: '' },
+    { title: 'Book 0', author: 'Writer 0' },
+  ]);
+  assert.match(sent.url, /models\/gemini-[\w.-]+:generateContent$/);
+  assert.equal(sent.options.headers['x-goog-api-key'], 'test-gemini-key');
+  const body = JSON.parse(sent.options.body);
+  assert.equal(body.contents[0].parts[0].inlineData.data, '/9j/AAAA');
+  assert.equal(body.generationConfig.responseMimeType, 'application/json');
+  fetchMock.mock.restore();
+  delete process.env.GEMINI_API_KEY;
+});
+
+test('Gemini: missing key, busy, failing and unreadable answers get clear errors', async () => {
+  await assert.rejects(readShelfPhoto('/9j/AAAA'), { status: 503, message: /isn’t set up/ });
+  process.env.GEMINI_API_KEY = 'test-gemini-key';
+  const warn = mock.method(console, 'warn', () => {});
+  for (const [reply, expected] of [
+    [() => new Response('', { status: 429 }), { status: 503, message: /busy/ }],
+    [() => Response.json({ error: { message: 'boom' } }, { status: 500 }), { status: 502 }],
+    [() => geminiReply('not json'), { status: 502 }],
+    [() => { throw new TypeError('fetch failed'); }, { status: 504, message: /too long/ }],
+  ]) {
+    const fetchMock = mock.method(globalThis, 'fetch', async () => reply());
+    await assert.rejects(readShelfPhoto('/9j/AAAA'), expected);
+    fetchMock.mock.restore();
+  }
+  const fetchMock = mock.method(globalThis, 'fetch', async () => Response.json({ candidates: [] }));
+  assert.deepEqual(await readShelfPhoto('/9j/AAAA'), []);
+  fetchMock.mock.restore();
+  warn.mock.restore();
+  delete process.env.GEMINI_API_KEY;
+});
+
+test('scan: a photo becomes matched shelf books', async () => {
+  process.env.GEMINI_API_KEY = 'test-gemini-key';
+  const fetchMock = mock.method(globalThis, 'fetch', async url => (String(url).includes('generativelanguage')
+    ? geminiReply({ books: [{ title: 'Scan Test Book', author: 'Pat Writer' }] })
+    : Response.json({ docs: [{ key: '/works/OL20W', title: 'Scan Test Book', author_name: ['Pat Writer'], cover_i: 9, first_publish_year: 2001 }] })));
+  const json = mock.fn();
+  await scan({ body: { photo: '/9j/AAAAAAAA' } }, { json });
+  assert.deepEqual(json.mock.calls[0].arguments[0], {
+    books: [{ openLibraryId: 'OL20W', title: 'Scan Test Book', author: 'Pat Writer', cover: 'https://covers.openlibrary.org/b/id/9-L.jpg', year: 2001 }],
+  });
+  fetchMock.mock.restore();
+  delete process.env.GEMINI_API_KEY;
 });
 
 test('rate limit: each reader gets their own allowance, then 429 with Retry-After', () => {

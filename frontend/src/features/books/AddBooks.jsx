@@ -18,16 +18,20 @@ function newBookId() {
 
 // "Add your books" step: pick a source (Goodreads, photo, library), then edit or add
 // books by hand. Every panel stays mounted, so switching tabs never loses a running import.
-export default function AddBooks({ books = [], catalog = [], onBooksChange, onContinue }) {
+export default function AddBooks({ books = [], onBooksChange, onContinue }) {
   const fromSource = source => books.filter(book => (source === 'library' ? !book.source || book.source === 'library' : book.source === source));
   // Coming back to this page (Back, refresh, "Add book") shows what is already on the shelf.
   const [mode, setMode] = useState(() => (fromSource('goodreads').length ? 'goodreads' : fromSource('photo').length ? 'photo' : books.length ? 'library' : 'goodreads'));
   const [editor, setEditor] = useState(null);
 
+  // Imports finish after a wait, so they merge into the shelf as it is by then: books picked
+  // or removed in another tab meanwhile are kept.
   function importBooks(source, picks) {
-    const keys = new Set(books.map(bookKey));
-    const added = picks.filter(book => !keys.has(bookKey(book))).map(book => ({ ...book, source }));
-    onBooksChange([...books, ...added]);
+    onBooksChange(current => {
+      const keys = new Set(current.map(bookKey));
+      const added = picks.filter(book => !keys.has(bookKey(book))).map(book => ({ ...book, source }));
+      return [...current, ...added];
+    });
   }
 
   function toggleLibraryBook(book) {
@@ -81,7 +85,6 @@ export default function AddBooks({ books = [], catalog = [], onBooksChange, onCo
       <PhotoPanel
         hidden={mode !== 'photo'}
         books={fromSource('photo')}
-        catalog={catalog}
         onImport={picks => importBooks('photo', picks)}
         onEdit={editBook}
         onAddManually={addManually('photo')}

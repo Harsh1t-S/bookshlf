@@ -96,7 +96,8 @@ export default function useBookshelf() {
 
     searchParam: name => new URLSearchParams(window.location.search).get(name),
     isUnlocked: chosen => isThemeUnlocked(chosen, purchasedThemeIds),
-    setBooks: nextBooks => updateDraft({ books: nextBooks }),
+    // The new books, or (like React's setState) a function from the current books to them.
+    setBooks: next => setDraft(current => ({ ...current, books: typeof next === 'function' ? next(current.books) : next })),
     selectTheme: chosen => updateDraft({ themeId: chosen.id }),
 
     startSetup() {

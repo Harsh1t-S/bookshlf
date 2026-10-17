@@ -1,31 +1,41 @@
 import { useEffect, useRef, useState } from 'react';
 import BookList from '../BookList.jsx';
 import ImportStatus from '../ImportStatus.jsx';
+import { scanShelfPhoto } from '../photo.js';
 
-const ANALYZE_DELAY = 1800;
+const count = number => `${number} ${number === 1 ? 'book' : 'books'}`;
 
-// "Photograph your shelves". Recognition is still simulated with titles from the local catalog.
-export default function PhotoPanel({ hidden, books, catalog, onImport, onEdit, onAddManually }) {
+// "Photograph your shelves": Gemini reads the spines in a photo (through our API) and each
+// book is matched on Open Library. Readers can scan one shelf after another.
+export default function PhotoPanel({ hidden, books, onImport, onEdit, onAddManually }) {
   const [phase, setPhase] = useState(() => (books.length ? 'done' : 'idle'));
+  const [found, setFound] = useState(null); // Books in the latest photo; null until one is scanned here.
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
-  const timer = useRef(0);
+  const scan = useRef(null);
 
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  // Leaving the page cancels a scan that is still running.
+  useEffect(() => () => scan.current?.abort(), []);
 
-  function readPhoto(file) {
+  async function readPhoto(file) {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setError('Choose an image file (JPG, PNG or HEIC) of your bookshelf.');
       return;
     }
     setError('');
-    setPhase('analyzing');
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      onImport(catalog.slice(6, 12));
+    setPhase('reading');
+    scan.current = new AbortController();
+    try {
+      const recognized = await scanShelfPhoto(file, { signal: scan.current.signal });
+      onImport(recognized);
+      setFound(recognized.length);
       setPhase('done');
-    }, ANALYZE_DELAY);
+    } catch (failure) {
+      if (failure.name === 'AbortError') return;
+      setError(failure.message);
+      setPhase('idle');
+    }
   }
 
   return (
@@ -33,26 +43,30 @@ export default function PhotoPanel({ hidden, books, catalog, onImport, onEdit, o
       {phase === 'idle' && (
         <>
           <h2>Scan Your Physical Bookshelf Photo</h2>
-          <p className="fg-panel__desc">Upload a clear photo of your bookshelf or book stack. Our Gemini vision engine reads the spines and populates your virtual bookshelf.</p>
-          <label
-            className="fg-drop"
-            data-over={dragOver}
-            onDragOver={event => { event.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={event => { event.preventDefault(); setDragOver(false); readPhoto(event.dataTransfer.files?.[0]); }}
-          >
-            Click to select or drag and drop a bookshelf photo
-            <input type="file" accept="image/*" className="sr-only" onChange={event => { readPhoto(event.target.files?.[0]); event.target.value = ''; }} />
-          </label>
-          {error && <p className="fg-field-error" role="alert">{error}</p>}
+          <p className="fg-panel__desc">Upload a clear photo of your bookshelf or book stack. Our Gemini vision engine reads the spines and populates your virtual bookshelf. For best results, photograph one shelf at a time, close enough to read the spines.</p>
         </>
       )}
-      {phase === 'analyzing' && <ImportStatus>Analyzing bookshelf image with Gemini Vision to extract book titles &amp; authors...</ImportStatus>}
+      {phase === 'reading' && <ImportStatus>Reading the spines with Gemini Vision and looking up each book. This can take up to 30 seconds...</ImportStatus>}
       {phase === 'done' && (
-        <>
-          <ImportStatus tone="success">Recognized {books.length} {books.length === 1 ? 'book' : 'books'} from the photo.</ImportStatus>
-          <BookList title={`Recognized Books (${books.length})`} books={books} action="Edit Details" onAction={onEdit} onAddManually={onAddManually} />
-        </>
+        <ImportStatus tone="success">
+          {found === null ? `Recognized ${count(books.length)} from your photos.` : `Found ${count(found)} in your photo.`}
+        </ImportStatus>
+      )}
+      {phase !== 'reading' && (
+        <label
+          className="fg-drop"
+          data-over={dragOver}
+          onDragOver={event => { event.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={event => { event.preventDefault(); setDragOver(false); readPhoto(event.dataTransfer.files?.[0]); }}
+        >
+          {phase === 'done' ? 'More shelves? Click to select or drag and drop another photo' : 'Click to select or drag and drop a bookshelf photo'}
+          <input type="file" accept="image/*" className="sr-only" onChange={event => { readPhoto(event.target.files?.[0]); event.target.value = ''; }} />
+        </label>
+      )}
+      {error && <p className="fg-field-error" role="alert">{error}</p>}
+      {(phase === 'done' || books.length > 0) && (
+        <BookList title={`Recognized Books (${books.length})`} books={books} action="Edit Details" onAction={onEdit} onAddManually={onAddManually} />
       )}
     </section>
   );

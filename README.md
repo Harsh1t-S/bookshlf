@@ -86,14 +86,19 @@ Vite builds those into the public JavaScript.
   Spine Shelf and MacOS are premium (₹749 / ₹1,249 / ₹1,749 + 18% GST).
 - The Goodreads import is real: the backend reads the reader's public "Read" and
   "Currently Reading" shelves.
-- Shelf photos are read by Gemini (`gemini-3.5-flash-lite`) through `POST /api/books/scan`.
-  The browser shrinks the photo to a JPEG of at most 1,600 px (under ~730 KB) first. The
-  backend asks Gemini for up to 30 titles and authors, then looks each one up on Open
-  Library for its cover (three at a time, 10 seconds in all). Books it can't match keep the
-  text Gemini read, without a cover. Books with no author are left out. The route needs a
-  signed-in reader and allows 10 scans per 10 minutes per reader. Photos are never stored.
-  The free tier is enough to start; its daily quota is shared by every reader, and Google
-  may use free-tier photos to improve its products (the privacy policy says so).
+- Shelf photos are read by Gemini (`gemini-3.5-flash-lite`, minimal thinking) through
+  `POST /api/books/scan`. The browser first shrinks the photo to about 2 megapixels and
+  under ~730 KB of JPEG; a pixel budget rather than a longest edge keeps panoramas readable.
+  The backend asks Gemini for up to 40 titles and authors, skipping magazines, notebooks and
+  films. It then finds covers on Open Library, five books per query (a 40-book shelf is
+  eight calls), within 8 seconds in all. Books keep the title and author Gemini read; Open
+  Library adds the cover, year and id. Books with no author are left out, and repeats are
+  dropped. The answer's `capped` flag tells the panel to suggest photographing the rest of a
+  bigger shelf. Gemini gets one retry when it's overloaded. The route needs a signed-in
+  reader and allows 20 scans per 10 minutes per reader. Photos are never stored. A scan
+  usually takes 3–9 seconds. The free tier is enough to start; its daily quota is shared
+  by every reader, and Google may use free-tier photos to improve its products (the privacy
+  policy says so).
 - The book library searches Open Library through `GET /api/books/search?q=…` (free, no
   key, about 3 requests a second). The panel waits 350 ms after typing stops (debounce).
   The route needs a signed-in reader, allows 30 searches a minute per reader, starts

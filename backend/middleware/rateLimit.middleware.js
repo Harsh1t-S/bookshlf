@@ -19,8 +19,11 @@ export function rateLimit({ limit, windowMs }) {
     }
     window.count += 1;
     if (window.count > limit) {
-      response.set('Retry-After', String(Math.ceil((window.resetAt - now) / 1000)));
-      throw new HttpError(429, 'You’re going a bit fast. Wait a few seconds and try again.');
+      const wait = Math.ceil((window.resetAt - now) / 1000);
+      response.set('Retry-After', String(wait));
+      throw new HttpError(429, wait > 90
+        ? `You’ve done that a lot. Try again in ${Math.ceil(wait / 60)} minutes.`
+        : 'You’re going a bit fast. Wait a few seconds and try again.');
     }
     next();
   };

@@ -25,11 +25,12 @@ export default function AddBooks({ books = [], onBooksChange, onContinue }) {
   const [editor, setEditor] = useState(null);
 
   // Imports finish after a wait, so they merge into the shelf as it is by then: books picked
-  // or removed in another tab meanwhile are kept.
+  // or removed in another tab meanwhile are kept. A book already there under the same title
+  // and author, or the same id (a scanned book can match one picked from the library), is skipped.
   function importBooks(source, picks) {
     onBooksChange(current => {
-      const keys = new Set(current.map(bookKey));
-      const added = picks.filter(book => !keys.has(bookKey(book))).map(book => ({ ...book, source }));
+      const keys = new Set(current.flatMap(book => [bookKey(book), book.id]));
+      const added = picks.filter(book => !keys.has(bookKey(book)) && !keys.has(book.id)).map(book => ({ ...book, source }));
       return [...current, ...added];
     });
   }

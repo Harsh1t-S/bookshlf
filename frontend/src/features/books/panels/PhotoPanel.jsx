@@ -9,7 +9,7 @@ const count = number => `${number} ${number === 1 ? 'book' : 'books'}`;
 // book is matched on Open Library. Readers can scan one shelf after another.
 export default function PhotoPanel({ hidden, books, onImport, onEdit, onAddManually }) {
   const [phase, setPhase] = useState(() => (books.length ? 'done' : 'idle'));
-  const [found, setFound] = useState(null); // Books in the latest photo; null until one is scanned here.
+  const [latest, setLatest] = useState(null); // { found, capped } for the latest photo; null until one is scanned here.
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const scan = useRef(null);
@@ -27,9 +27,9 @@ export default function PhotoPanel({ hidden, books, onImport, onEdit, onAddManua
     setPhase('reading');
     scan.current = new AbortController();
     try {
-      const recognized = await scanShelfPhoto(file, { signal: scan.current.signal });
+      const { books: recognized, capped } = await scanShelfPhoto(file, { signal: scan.current.signal });
       onImport(recognized);
-      setFound(recognized.length);
+      setLatest({ found: recognized.length, capped });
       setPhase('done');
     } catch (failure) {
       if (failure.name === 'AbortError') return;
@@ -46,10 +46,11 @@ export default function PhotoPanel({ hidden, books, onImport, onEdit, onAddManua
           <p className="fg-panel__desc">Upload a clear photo of your bookshelf or book stack. Our Gemini vision engine reads the spines and populates your virtual bookshelf. For best results, photograph one shelf at a time, close enough to read the spines.</p>
         </>
       )}
-      {phase === 'reading' && <ImportStatus>Reading the spines with Gemini Vision and looking up each book. This can take up to 30 seconds...</ImportStatus>}
+      {phase === 'reading' && <ImportStatus>Reading the spines with Gemini Vision and looking up each book. This usually takes under 10 seconds...</ImportStatus>}
       {phase === 'done' && (
         <ImportStatus tone="success">
-          {found === null ? `Recognized ${count(books.length)} from your photos.` : `Found ${count(found)} in your photo.`}
+          {latest === null ? `Recognized ${count(books.length)} from your photos.` : `Found ${count(latest.found)} in your photo.`}
+          {latest?.capped && ' That’s the most we read from one photo, so photograph the rest of the shelf separately.'}
         </ImportStatus>
       )}
       {phase !== 'reading' && (
